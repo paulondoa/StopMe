@@ -6,18 +6,28 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Users, Shield, Key, User, Mail } from 'lucide-react-native';
 import { DEFAULT_ACCOUNT } from '@/lib/defaultAuth';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
 
 export default function DemoAccess() {
   const router = useRouter();
+  const { signIn } = useDemoAuth();
 
-  const handleGetStarted = () => {
-    router.push('/(auth)/signin');
+  const handleGetStarted = async () => {
+    // Auto-sign in with demo credentials
+    const { error } = await signIn(DEFAULT_ACCOUNT.email, DEFAULT_ACCOUNT.password);
+    
+    if (!error) {
+      // Navigate to main app after successful sign in
+      router.replace('/(tabs)');
+    } else {
+      // If auto-sign in fails, go to sign in page
+      router.push('/(auth)/signin');
+    }
   };
 
   return (
@@ -159,6 +169,12 @@ export default function DemoAccess() {
               <Text style={styles.getStartedButtonText}>Access Demo Account</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.manualSignInButton}
+              onPress={() => router.push('/(auth)/signin')}
+            >
+              <Text style={styles.manualSignInButtonText}>Manual Sign In</Text>
+            </TouchableOpacity>
             <View style={styles.footer}>
               <Text style={styles.footerText}>
                 Use the credentials above to sign in and explore all features
@@ -357,6 +373,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#3B82F6',
+  },
+  manualSignInButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  manualSignInButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: 'white',
   },
   footer: {
     alignItems: 'center',
