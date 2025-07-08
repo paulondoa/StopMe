@@ -47,6 +47,13 @@ export default function Welcome() {
           </View>
 
           <View style={styles.actions}>
+            <View style={styles.demoInfo}>
+              <Text style={styles.demoTitle}>Demo Account Available</Text>
+              <Text style={styles.demoCredentials}>
+                Email: demo@spotme.app{'\n'}Password: demo123
+              </Text>
+            </View>
+
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => router.push('/(auth)/signup')}
@@ -141,5 +148,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: 'white',
+  },
+  demoInfo: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  demoTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: 'white',
+    marginBottom: 8,
+  },
+  demoCredentials: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 16,
   },
 });

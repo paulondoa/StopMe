@@ -18,11 +18,8 @@ export function DemoAuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Auto-login with default account for demo
-    setTimeout(() => {
-      setUser(DEFAULT_ACCOUNT);
-      setLoading(false);
-    }, 1000);
+    // Don't auto-login, let user sign in manually
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {

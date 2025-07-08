@@ -12,7 +12,7 @@ export default function Index() {
       if (user) {
         router.replace('/(tabs)');
       } else {
-        router.replace('/demo');
+        router.replace('/(auth)/welcome');
       }
     }
   }, [user, loading]);
