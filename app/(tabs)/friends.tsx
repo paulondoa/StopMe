@@ -9,20 +9,13 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { useFriends } from '@/hooks/useFriends';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { UserPlus, Check, X, Search, Users } from 'lucide-react-native';
 
 export default function FriendsScreen() {
-  const {
-    friends,
-    pendingRequests,
-    sentRequests,
-    loading,
-    sendFriendRequest,
-    acceptFriendRequest,
-    rejectFriendRequest,
-    removeFriend,
-  } = useFriends();
+  const { friends } = useDemoAuth();
+  const [pendingRequests] = useState([]);
+  const [sentRequests] = useState([]);
 
   const [searchEmail, setSearchEmail] = useState('');
   const [activeTab, setActiveTab] = useState<'friends' | 'pending' | 'sent'>('friends');
@@ -33,28 +26,16 @@ export default function FriendsScreen() {
       return;
     }
 
-    const { error } = await sendFriendRequest(searchEmail.trim());
-    
-    if (error) {
-      Alert.alert('Error', error);
-    } else {
-      Alert.alert('Success', 'Friend request sent!');
-      setSearchEmail('');
-    }
+    Alert.alert('Demo Mode', 'Friend requests are simulated in demo mode');
+    setSearchEmail('');
   };
 
   const handleAcceptRequest = async (requestId: string) => {
-    const { error } = await acceptFriendRequest(requestId);
-    if (error) {
-      Alert.alert('Error', error);
-    }
+    Alert.alert('Demo Mode', 'This is a demo - requests are simulated');
   };
 
   const handleRejectRequest = async (requestId: string) => {
-    const { error } = await rejectFriendRequest(requestId);
-    if (error) {
-      Alert.alert('Error', error);
-    }
+    Alert.alert('Demo Mode', 'This is a demo - requests are simulated');
   };
 
   const handleRemoveFriend = (friendshipId: string, friendName: string) => {
@@ -66,11 +47,8 @@ export default function FriendsScreen() {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: async () => {
-            const { error } = await removeFriend(friendshipId);
-            if (error) {
-              Alert.alert('Error', error);
-            }
+          onPress: () => {
+            Alert.alert('Demo Mode', 'This is a demo - friend removal is simulated');
           },
         },
       ]
@@ -96,29 +74,29 @@ export default function FriendsScreen() {
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {item.friend_user.name.charAt(0).toUpperCase()}
+              {item.name.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View 
             style={[
               styles.statusIndicator, 
-              { backgroundColor: getStatusColor(item.friend_user.status) }
+              { backgroundColor: getStatusColor(item.status) }
             ]} 
           />
         </View>
         <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{item.friend_user.name}</Text>
-          <Text style={styles.friendEmail}>{item.friend_user.email}</Text>
+          <Text style={styles.friendName}>{item.name}</Text>
+          <Text style={styles.friendEmail}>{item.email}</Text>
           <Text style={styles.friendStatus}>
-            {item.friend_user.status === 'online' ? 'Online' : 
-             item.friend_user.status === 'ghost' ? 'Ghost Mode' : 
-             `Last seen ${new Date(item.friend_user.last_seen).toLocaleDateString()}`}
+            {item.status === 'online' ? 'Online' : 
+             item.status === 'ghost' ? 'Ghost Mode' : 
+             `Last seen ${new Date(item.last_seen).toLocaleDateString()}`}
           </Text>
         </View>
       </View>
       <TouchableOpacity
         style={styles.removeButton}
-        onPress={() => handleRemoveFriend(item.id, item.friend_user.name)}
+        onPress={() => handleRemoveFriend(item.id, item.name)}
       >
         <X color="#EF4444" size={20} />
       </TouchableOpacity>
@@ -130,12 +108,12 @@ export default function FriendsScreen() {
       <View style={styles.friendInfo}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {item.friend_user.name.charAt(0).toUpperCase()}
+            {item.name.charAt(0).toUpperCase()}
           </Text>
         </View>
         <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{item.friend_user.name}</Text>
-          <Text style={styles.friendEmail}>{item.friend_user.email}</Text>
+          <Text style={styles.friendName}>{item.name}</Text>
+          <Text style={styles.friendEmail}>{item.email}</Text>
         </View>
       </View>
       <View style={styles.requestActions}>
@@ -160,12 +138,12 @@ export default function FriendsScreen() {
       <View style={styles.friendInfo}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {item.friend_user.name.charAt(0).toUpperCase()}
+            {item.name.charAt(0).toUpperCase()}
           </Text>
         </View>
         <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{item.friend_user.name}</Text>
-          <Text style={styles.friendEmail}>{item.friend_user.email}</Text>
+          <Text style={styles.friendName}>{item.name}</Text>
+          <Text style={styles.friendEmail}>{item.email}</Text>
           <Text style={styles.pendingText}>Request pending</Text>
         </View>
       </View>

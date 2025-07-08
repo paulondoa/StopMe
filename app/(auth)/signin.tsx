@@ -11,12 +11,12 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 
 export default function SignIn() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn } = useDemoAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

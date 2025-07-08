@@ -7,16 +7,13 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { useLocation } from '@/contexts/LocationContext';
-import { useFriendLocations } from '@/hooks/useFriendLocations';
+import { useDemoLocation } from '@/contexts/DemoLocationContext';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { Eye, EyeOff, RefreshCw, Navigation, MapPin } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function MapScreen() {
-  const { user } = useAuth();
-  const { location, hasPermission, requestPermission, startTracking, stopTracking, isTracking } = useLocation();
-  const { friendLocations, loading, refreshLocations } = useFriendLocations();
+  const { user, friends } = useDemoAuth();
+  const { location, hasPermission, requestPermission, startTracking, stopTracking, isTracking } = useDemoLocation();
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -42,23 +39,8 @@ export default function MapScreen() {
   };
 
   const toggleVisibility = async () => {
-    if (!user) return;
-
     const newVisibility = !isVisible;
     setIsVisible(newVisibility);
-
-    const { error } = await supabase
-      .from('users')
-      .update({ 
-        visible: newVisibility,
-        status: newVisibility ? 'online' : 'ghost'
-      })
-      .eq('id', user.id);
-
-    if (error) {
-      console.error('Error updating visibility:', error);
-      setIsVisible(!newVisibility); // Revert on error
-    }
 
     if (newVisibility && !isTracking) {
       await startTracking();
@@ -104,30 +86,30 @@ export default function MapScreen() {
         )}
 
         {/* Friends List */}
-        {friendLocations.length > 0 && (
+        {friends.length > 0 && (
           <View style={styles.friendsList}>
             <Text style={styles.friendsTitle}>Friends Nearby</Text>
-            {friendLocations.map((friendLocation) => (
-              <View key={friendLocation.user.id} style={styles.friendItem}>
+            {friends.map((friend) => (
+              <View key={friend.id} style={styles.friendItem}>
                 <View style={styles.friendInfo}>
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>
-                      {friendLocation.user.name.charAt(0).toUpperCase()}
+                      {friend.name.charAt(0).toUpperCase()}
                     </Text>
                   </View>
                   <View style={styles.friendDetails}>
-                    <Text style={styles.friendName}>{friendLocation.user.name}</Text>
+                    <Text style={styles.friendName}>{friend.name}</Text>
                     <Text style={styles.friendLocation}>
-                      Lat: {friendLocation.latitude.toFixed(4)}, Lng: {friendLocation.longitude.toFixed(4)}
+                      Lat: {friend.latitude.toFixed(4)}, Lng: {friend.longitude.toFixed(4)}
                     </Text>
                     <Text style={styles.friendTime}>
-                      Last seen: {new Date(friendLocation.updated_at).toLocaleTimeString()}
+                      Last seen: {new Date(friend.last_seen).toLocaleTimeString()}
                     </Text>
                   </View>
                   <View 
                     style={[
                       styles.statusIndicator, 
-                      { backgroundColor: getStatusColor(friendLocation.user.status) }
+                      { backgroundColor: getStatusColor(friend.status) }
                     ]} 
                   />
                 </View>
@@ -174,7 +156,7 @@ export default function MapScreen() {
         
         <View style={styles.statusItem}>
           <Text style={styles.statusText}>
-            {friendLocations.length} friends nearby
+            {friends.length} friends nearby
           </Text>
         </View>
       </View>

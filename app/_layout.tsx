@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { LocationProvider } from '@/contexts/LocationContext';
+import { DemoAuthProvider } from '@/contexts/DemoAuthContext';
+import { DemoLocationProvider } from '@/contexts/DemoLocationContext';
 import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -29,15 +29,16 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <LocationProvider>
+    <DemoAuthProvider>
+      <DemoLocationProvider>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="demo" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
-      </LocationProvider>
-    </AuthProvider>
+      </DemoLocationProvider>
+    </DemoAuthProvider>
   );
 }

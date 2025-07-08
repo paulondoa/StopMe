@@ -10,12 +10,12 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 
 export default function SignUp() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp } = useDemoAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

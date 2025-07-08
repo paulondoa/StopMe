@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
 
 export default function Index() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useDemoAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -12,7 +12,7 @@ export default function Index() {
       if (user) {
         router.replace('/(tabs)');
       } else {
-        router.replace('/(auth)/welcome');
+        router.replace('/demo');
       }
     }
   }, [user, loading]);

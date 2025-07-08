@@ -9,54 +9,25 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLocation } from '@/contexts/LocationContext';
-import { supabase } from '@/lib/supabase';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
+import { useDemoLocation } from '@/contexts/DemoLocationContext';
 import { LogOut, MapPin, Eye, EyeOff, Shield, Bell } from 'lucide-react-native';
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
-  const { isTracking, startTracking, stopTracking } = useLocation();
+  const { user, signOut } = useDemoAuth();
+  const { isTracking, startTracking, stopTracking } = useDemoLocation();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchProfile();
+      setProfile(user);
+      setLoading(false);
     }
   }, [user]);
 
-  const fetchProfile = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching profile:', error);
-    } else {
-      setProfile(data);
-    }
-    setLoading(false);
-  };
-
   const updateProfile = async (updates: any) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', user.id);
-
-    if (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
-    } else {
-      setProfile({ ...profile, ...updates });
-    }
+    setProfile({ ...profile, ...updates });
   };
 
   const toggleVisibility = async (value: boolean) => {

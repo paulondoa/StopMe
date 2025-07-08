@@ -9,16 +9,13 @@ import {
   Platform,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useLocation } from '@/contexts/LocationContext';
-import { useFriendLocations } from '@/hooks/useFriendLocations';
+import { useDemoLocation } from '@/contexts/DemoLocationContext';
+import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { Eye, EyeOff, RefreshCw, Navigation } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function MapScreen() {
-  const { user } = useAuth();
-  const { location, hasPermission, requestPermission, startTracking, stopTracking, isTracking } = useLocation();
-  const { friendLocations, loading, refreshLocations } = useFriendLocations();
+  const { user, friends } = useDemoAuth();
+  const { location, hasPermission, requestPermission, startTracking, stopTracking, isTracking } = useDemoLocation();
   const [isVisible, setIsVisible] = useState(true);
   const [mapRegion, setMapRegion] = useState({
     latitude: 37.78825,
@@ -61,29 +58,19 @@ export default function MapScreen() {
   };
 
   const toggleVisibility = async () => {
-    if (!user) return;
-
     const newVisibility = !isVisible;
     setIsVisible(newVisibility);
-
-    const { error } = await supabase
-      .from('users')
-      .update({ 
-        visible: newVisibility,
-        status: newVisibility ? 'online' : 'ghost'
-      })
-      .eq('id', user.id);
-
-    if (error) {
-      console.error('Error updating visibility:', error);
-      setIsVisible(!newVisibility); // Revert on error
-    }
 
     if (newVisibility && !isTracking) {
       await startTracking();
     } else if (!newVisibility && isTracking) {
       stopTracking();
     }
+  };
+
+  const refreshLocations = () => {
+    // Demo refresh - in real app this would fetch from server
+    console.log('Refreshing friend locations...');
   };
 
   const centerOnCurrentLocation = () => {
@@ -134,16 +121,16 @@ export default function MapScreen() {
         )}
 
         {/* Friend locations */}
-        {friendLocations.map((friendLocation) => (
+        {friends.map((friend) => (
           <Marker
-            key={friendLocation.user.id}
+            key={friend.id}
             coordinate={{
-              latitude: friendLocation.latitude,
-              longitude: friendLocation.longitude,
+              latitude: friend.latitude,
+              longitude: friend.longitude,
             }}
-            title={friendLocation.user.name}
-            description={`Last seen: ${new Date(friendLocation.updated_at).toLocaleTimeString()}`}
-            pinColor={getMarkerColor(friendLocation.user.status)}
+            title={friend.name}
+            description={`Last seen: ${new Date(friend.last_seen).toLocaleTimeString()}`}
+            pinColor={getMarkerColor(friend.status)}
           />
         ))}
       </MapView>
@@ -192,7 +179,7 @@ export default function MapScreen() {
         
         <View style={styles.statusItem}>
           <Text style={styles.statusText}>
-            {friendLocations.length} friends nearby
+            {friends.length} friends nearby
           </Text>
         </View>
       </View>
