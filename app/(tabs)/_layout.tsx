@@ -1,17 +1,22 @@
 import { Tabs } from 'expo-router';
 import { MapPin, Users, Settings } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function TabLayout() {
+  const { theme } = useTheme();
+  const { t } = useLanguage();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#3B82F6',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: theme.surface,
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: theme.border,
           paddingBottom: 8,
           paddingTop: 8,
           height: 84,
@@ -26,7 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Map',
+          title: t('map'),
           tabBarIcon: ({ size, color }) => (
             <MapPin size={size} color={color} />
           ),
@@ -35,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="friends"
         options={{
-          title: 'Friends',
+          title: t('friends'),
           tabBarIcon: ({ size, color }) => (
             <Users size={size} color={color} />
           ),
@@ -44,7 +49,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('profile'),
           tabBarIcon: ({ size, color }) => (
             <Settings size={size} color={color} />
           ),

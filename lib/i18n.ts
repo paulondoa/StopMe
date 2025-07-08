@@ -1,0 +1,555 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+// Translation resources
+const resources = {
+  en: {
+    translation: {
+      // Common
+      loading: 'Loading...',
+      error: 'Error',
+      success: 'Success',
+      cancel: 'Cancel',
+      save: 'Save',
+      delete: 'Delete',
+      edit: 'Edit',
+      done: 'Done',
+      back: 'Back',
+      next: 'Next',
+      
+      // Auth
+      signIn: 'Sign In',
+      signUp: 'Sign Up',
+      signOut: 'Sign Out',
+      email: 'Email',
+      password: 'Password',
+      name: 'Full Name',
+      welcomeBack: 'Welcome Back',
+      createAccount: 'Create Account',
+      signInToContinue: 'Sign in to continue to SpotMe',
+      joinSpotMe: 'Join SpotMe and stay connected',
+      dontHaveAccount: "Don't have an account?",
+      alreadyHaveAccount: 'Already have an account?',
+      enterEmail: 'Enter your email',
+      enterPassword: 'Enter your password',
+      enterFullName: 'Enter your full name',
+      createPassword: 'Create a password',
+      passwordMinLength: 'Password must be at least 6 characters',
+      fillAllFields: 'Please fill in all fields',
+      invalidCredentials: 'Invalid email or password',
+      signingIn: 'Signing In...',
+      creatingAccount: 'Creating Account...',
+      
+      // Welcome
+      stayConnected: 'Stay connected with friends in real-time',
+      realTimeLocation: 'Real-time Location',
+      findFriends: 'Find Friends',
+      privacyControl: 'Privacy Control',
+      getStarted: 'Get Started',
+      demoAccountAvailable: 'Demo Account Available',
+      demoCredentials: 'Email: demo@spotme.app\nPassword: demo123',
+      
+      // Demo
+      demoAccountReady: 'Demo Account Ready',
+      defaultAccountCreated: 'Your default account has been created and is ready to use',
+      accountAccess: 'Account Access',
+      whatsIncluded: "What's Included",
+      demoLocationDescription: 'Demo location in San Francisco with simulated updates',
+      demoFriendsDescription: 'Pre-configured friends with different online statuses',
+      privacyControlsDescription: 'Toggle visibility and ghost mode functionality',
+      yourDemoFriends: 'Your Demo Friends',
+      accessDemoAccount: 'Access Demo Account',
+      manualSignIn: 'Manual Sign In',
+      useCredentialsAbove: 'Use the credentials above to sign in and explore all features',
+      
+      // Navigation
+      map: 'Map',
+      friends: 'Friends',
+      profile: 'Profile',
+      
+      // Map
+      visible: 'Visible',
+      hidden: 'Hidden',
+      friendsNearby: '{{count}} friends nearby',
+      friendsNearby_one: '{{count}} friend nearby',
+      friendsNearby_zero: 'No friends nearby',
+      mapView: 'Map View',
+      interactiveMapMobile: 'Interactive map is available on mobile devices',
+      yourLocation: 'Your Location',
+      lastSeen: 'Last seen: {{time}}',
+      
+      // Friends
+      noFriendsYet: 'No friends yet',
+      addFriendsDescription: 'Add friends by entering their email address above',
+      enterFriendEmail: "Enter friend's email",
+      noPendingRequests: 'No pending requests',
+      noSentRequests: 'No sent requests',
+      requests: 'Requests',
+      sent: 'Sent',
+      online: 'Online',
+      offline: 'Offline',
+      ghostMode: 'Ghost Mode',
+      requestPending: 'Request pending',
+      removeFriend: 'Remove Friend',
+      removeFriendConfirm: 'Are you sure you want to remove {{name}} from your friends?',
+      remove: 'Remove',
+      demoMode: 'Demo Mode',
+      friendRequestsSimulated: 'Friend requests are simulated in demo mode',
+      friendRemovalSimulated: 'This is a demo - friend removal is simulated',
+      requestsSimulated: 'This is a demo - requests are simulated',
+      enterEmailAddress: 'Please enter an email address',
+      
+      // Profile
+      privacyLocation: 'Privacy & Location',
+      account: 'Account',
+      visibleToFriends: 'Visible to Friends',
+      allowFriendsLocation: 'Allow friends to see your location',
+      locationTracking: 'Location Tracking',
+      shareRealTimeLocation: 'Share your real-time location',
+      ghostModeTitle: 'Ghost Mode',
+      ghostModeDescription: 'Become invisible to all friends',
+      ghostModeActive: 'You are invisible to friends',
+      signOutConfirm: 'Are you sure you want to sign out?',
+      
+      // Status
+      onlineStatus: 'Online',
+      offlineStatus: 'Offline',
+      ghostModeStatus: 'Ghost Mode',
+      lastSeenTime: 'Last seen {{time}}',
+      minutesAgo: '{{count}} min ago',
+      minutesAgo_one: '{{count}} min ago',
+      hoursAgo: '{{count}} hours ago',
+      hoursAgo_one: '{{count}} hour ago',
+      
+      // Settings
+      settings: 'Settings',
+      appearance: 'Appearance',
+      language: 'Language',
+      theme: 'Theme',
+      lightMode: 'Light Mode',
+      darkMode: 'Dark Mode',
+      systemMode: 'System',
+      selectLanguage: 'Select Language',
+      selectTheme: 'Select Theme',
+      
+      // App Info
+      appVersion: 'SpotMe v1.0.0',
+      appDescription: 'Stay connected with friends in real-time',
+    }
+  },
+  fr: {
+    translation: {
+      // Common
+      loading: 'Chargement...',
+      error: 'Erreur',
+      success: 'Succès',
+      cancel: 'Annuler',
+      save: 'Enregistrer',
+      delete: 'Supprimer',
+      edit: 'Modifier',
+      done: 'Terminé',
+      back: 'Retour',
+      next: 'Suivant',
+      
+      // Auth
+      signIn: 'Se connecter',
+      signUp: "S'inscrire",
+      signOut: 'Se déconnecter',
+      email: 'Email',
+      password: 'Mot de passe',
+      name: 'Nom complet',
+      welcomeBack: 'Bon retour',
+      createAccount: 'Créer un compte',
+      signInToContinue: 'Connectez-vous pour continuer sur SpotMe',
+      joinSpotMe: 'Rejoignez SpotMe et restez connecté',
+      dontHaveAccount: "Vous n'avez pas de compte ?",
+      alreadyHaveAccount: 'Vous avez déjà un compte ?',
+      enterEmail: 'Entrez votre email',
+      enterPassword: 'Entrez votre mot de passe',
+      enterFullName: 'Entrez votre nom complet',
+      createPassword: 'Créez un mot de passe',
+      passwordMinLength: 'Le mot de passe doit contenir au moins 6 caractères',
+      fillAllFields: 'Veuillez remplir tous les champs',
+      invalidCredentials: 'Email ou mot de passe invalide',
+      signingIn: 'Connexion...',
+      creatingAccount: 'Création du compte...',
+      
+      // Welcome
+      stayConnected: 'Restez connecté avec vos amis en temps réel',
+      realTimeLocation: 'Localisation en temps réel',
+      findFriends: 'Trouver des amis',
+      privacyControl: 'Contrôle de confidentialité',
+      getStarted: 'Commencer',
+      demoAccountAvailable: 'Compte de démonstration disponible',
+      demoCredentials: 'Email: demo@spotme.app\nMot de passe: demo123',
+      
+      // Demo
+      demoAccountReady: 'Compte de démonstration prêt',
+      defaultAccountCreated: 'Votre compte par défaut a été créé et est prêt à être utilisé',
+      accountAccess: 'Accès au compte',
+      whatsIncluded: 'Ce qui est inclus',
+      demoLocationDescription: 'Localisation de démonstration à San Francisco avec mises à jour simulées',
+      demoFriendsDescription: 'Amis pré-configurés avec différents statuts en ligne',
+      privacyControlsDescription: 'Basculer la visibilité et la fonctionnalité mode fantôme',
+      yourDemoFriends: 'Vos amis de démonstration',
+      accessDemoAccount: 'Accéder au compte de démonstration',
+      manualSignIn: 'Connexion manuelle',
+      useCredentialsAbove: 'Utilisez les identifiants ci-dessus pour vous connecter et explorer toutes les fonctionnalités',
+      
+      // Navigation
+      map: 'Carte',
+      friends: 'Amis',
+      profile: 'Profil',
+      
+      // Map
+      visible: 'Visible',
+      hidden: 'Masqué',
+      friendsNearby: '{{count}} amis à proximité',
+      friendsNearby_one: '{{count}} ami à proximité',
+      friendsNearby_zero: 'Aucun ami à proximité',
+      mapView: 'Vue carte',
+      interactiveMapMobile: 'La carte interactive est disponible sur les appareils mobiles',
+      yourLocation: 'Votre position',
+      lastSeen: 'Vu pour la dernière fois : {{time}}',
+      
+      // Friends
+      noFriendsYet: 'Pas encore d\'amis',
+      addFriendsDescription: 'Ajoutez des amis en saisissant leur adresse email ci-dessus',
+      enterFriendEmail: 'Entrez l\'email de votre ami',
+      noPendingRequests: 'Aucune demande en attente',
+      noSentRequests: 'Aucune demande envoyée',
+      requests: 'Demandes',
+      sent: 'Envoyées',
+      online: 'En ligne',
+      offline: 'Hors ligne',
+      ghostMode: 'Mode fantôme',
+      requestPending: 'Demande en attente',
+      removeFriend: 'Supprimer l\'ami',
+      removeFriendConfirm: 'Êtes-vous sûr de vouloir supprimer {{name}} de vos amis ?',
+      remove: 'Supprimer',
+      demoMode: 'Mode démonstration',
+      friendRequestsSimulated: 'Les demandes d\'amis sont simulées en mode démonstration',
+      friendRemovalSimulated: 'Ceci est une démonstration - la suppression d\'ami est simulée',
+      requestsSimulated: 'Ceci est une démonstration - les demandes sont simulées',
+      enterEmailAddress: 'Veuillez entrer une adresse email',
+      
+      // Profile
+      privacyLocation: 'Confidentialité et localisation',
+      account: 'Compte',
+      visibleToFriends: 'Visible par les amis',
+      allowFriendsLocation: 'Permettre aux amis de voir votre position',
+      locationTracking: 'Suivi de localisation',
+      shareRealTimeLocation: 'Partager votre position en temps réel',
+      ghostModeTitle: 'Mode fantôme',
+      ghostModeDescription: 'Devenez invisible pour tous vos amis',
+      ghostModeActive: 'Vous êtes invisible pour vos amis',
+      signOutConfirm: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+      
+      // Status
+      onlineStatus: 'En ligne',
+      offlineStatus: 'Hors ligne',
+      ghostModeStatus: 'Mode fantôme',
+      lastSeenTime: 'Vu pour la dernière fois {{time}}',
+      minutesAgo: 'il y a {{count}} min',
+      minutesAgo_one: 'il y a {{count}} min',
+      hoursAgo: 'il y a {{count}} heures',
+      hoursAgo_one: 'il y a {{count}} heure',
+      
+      // Settings
+      settings: 'Paramètres',
+      appearance: 'Apparence',
+      language: 'Langue',
+      theme: 'Thème',
+      lightMode: 'Mode clair',
+      darkMode: 'Mode sombre',
+      systemMode: 'Système',
+      selectLanguage: 'Sélectionner la langue',
+      selectTheme: 'Sélectionner le thème',
+      
+      // App Info
+      appVersion: 'SpotMe v1.0.0',
+      appDescription: 'Restez connecté avec vos amis en temps réel',
+    }
+  },
+  es: {
+    translation: {
+      // Common
+      loading: 'Cargando...',
+      error: 'Error',
+      success: 'Éxito',
+      cancel: 'Cancelar',
+      save: 'Guardar',
+      delete: 'Eliminar',
+      edit: 'Editar',
+      done: 'Hecho',
+      back: 'Atrás',
+      next: 'Siguiente',
+      
+      // Auth
+      signIn: 'Iniciar sesión',
+      signUp: 'Registrarse',
+      signOut: 'Cerrar sesión',
+      email: 'Email',
+      password: 'Contraseña',
+      name: 'Nombre completo',
+      welcomeBack: 'Bienvenido de vuelta',
+      createAccount: 'Crear cuenta',
+      signInToContinue: 'Inicia sesión para continuar en SpotMe',
+      joinSpotMe: 'Únete a SpotMe y mantente conectado',
+      dontHaveAccount: '¿No tienes una cuenta?',
+      alreadyHaveAccount: '¿Ya tienes una cuenta?',
+      enterEmail: 'Ingresa tu email',
+      enterPassword: 'Ingresa tu contraseña',
+      enterFullName: 'Ingresa tu nombre completo',
+      createPassword: 'Crea una contraseña',
+      passwordMinLength: 'La contraseña debe tener al menos 6 caracteres',
+      fillAllFields: 'Por favor completa todos los campos',
+      invalidCredentials: 'Email o contraseña inválidos',
+      signingIn: 'Iniciando sesión...',
+      creatingAccount: 'Creando cuenta...',
+      
+      // Welcome
+      stayConnected: 'Mantente conectado con amigos en tiempo real',
+      realTimeLocation: 'Ubicación en tiempo real',
+      findFriends: 'Encontrar amigos',
+      privacyControl: 'Control de privacidad',
+      getStarted: 'Comenzar',
+      demoAccountAvailable: 'Cuenta demo disponible',
+      demoCredentials: 'Email: demo@spotme.app\nContraseña: demo123',
+      
+      // Demo
+      demoAccountReady: 'Cuenta demo lista',
+      defaultAccountCreated: 'Tu cuenta predeterminada ha sido creada y está lista para usar',
+      accountAccess: 'Acceso a la cuenta',
+      whatsIncluded: 'Qué está incluido',
+      demoLocationDescription: 'Ubicación demo en San Francisco con actualizaciones simuladas',
+      demoFriendsDescription: 'Amigos preconfigurados con diferentes estados en línea',
+      privacyControlsDescription: 'Alternar visibilidad y funcionalidad de modo fantasma',
+      yourDemoFriends: 'Tus amigos demo',
+      accessDemoAccount: 'Acceder a cuenta demo',
+      manualSignIn: 'Inicio de sesión manual',
+      useCredentialsAbove: 'Usa las credenciales de arriba para iniciar sesión y explorar todas las características',
+      
+      // Navigation
+      map: 'Mapa',
+      friends: 'Amigos',
+      profile: 'Perfil',
+      
+      // Map
+      visible: 'Visible',
+      hidden: 'Oculto',
+      friendsNearby: '{{count}} amigos cerca',
+      friendsNearby_one: '{{count}} amigo cerca',
+      friendsNearby_zero: 'No hay amigos cerca',
+      mapView: 'Vista del mapa',
+      interactiveMapMobile: 'El mapa interactivo está disponible en dispositivos móviles',
+      yourLocation: 'Tu ubicación',
+      lastSeen: 'Visto por última vez: {{time}}',
+      
+      // Friends
+      noFriendsYet: 'Aún no hay amigos',
+      addFriendsDescription: 'Agrega amigos ingresando su dirección de email arriba',
+      enterFriendEmail: 'Ingresa el email de tu amigo',
+      noPendingRequests: 'No hay solicitudes pendientes',
+      noSentRequests: 'No hay solicitudes enviadas',
+      requests: 'Solicitudes',
+      sent: 'Enviadas',
+      online: 'En línea',
+      offline: 'Desconectado',
+      ghostMode: 'Modo fantasma',
+      requestPending: 'Solicitud pendiente',
+      removeFriend: 'Eliminar amigo',
+      removeFriendConfirm: '¿Estás seguro de que quieres eliminar a {{name}} de tus amigos?',
+      remove: 'Eliminar',
+      demoMode: 'Modo demo',
+      friendRequestsSimulated: 'Las solicitudes de amistad están simuladas en modo demo',
+      friendRemovalSimulated: 'Esto es una demo - la eliminación de amigos está simulada',
+      requestsSimulated: 'Esto es una demo - las solicitudes están simuladas',
+      enterEmailAddress: 'Por favor ingresa una dirección de email',
+      
+      // Profile
+      privacyLocation: 'Privacidad y ubicación',
+      account: 'Cuenta',
+      visibleToFriends: 'Visible para amigos',
+      allowFriendsLocation: 'Permitir que los amigos vean tu ubicación',
+      locationTracking: 'Seguimiento de ubicación',
+      shareRealTimeLocation: 'Compartir tu ubicación en tiempo real',
+      ghostModeTitle: 'Modo fantasma',
+      ghostModeDescription: 'Hazte invisible para todos los amigos',
+      ghostModeActive: 'Eres invisible para los amigos',
+      signOutConfirm: '¿Estás seguro de que quieres cerrar sesión?',
+      
+      // Status
+      onlineStatus: 'En línea',
+      offlineStatus: 'Desconectado',
+      ghostModeStatus: 'Modo fantasma',
+      lastSeenTime: 'Visto por última vez {{time}}',
+      minutesAgo: 'hace {{count}} min',
+      minutesAgo_one: 'hace {{count}} min',
+      hoursAgo: 'hace {{count}} horas',
+      hoursAgo_one: 'hace {{count}} hora',
+      
+      // Settings
+      settings: 'Configuración',
+      appearance: 'Apariencia',
+      language: 'Idioma',
+      theme: 'Tema',
+      lightMode: 'Modo claro',
+      darkMode: 'Modo oscuro',
+      systemMode: 'Sistema',
+      selectLanguage: 'Seleccionar idioma',
+      selectTheme: 'Seleccionar tema',
+      
+      // App Info
+      appVersion: 'SpotMe v1.0.0',
+      appDescription: 'Mantente conectado con amigos en tiempo real',
+    }
+  },
+  de: {
+    translation: {
+      // Common
+      loading: 'Laden...',
+      error: 'Fehler',
+      success: 'Erfolg',
+      cancel: 'Abbrechen',
+      save: 'Speichern',
+      delete: 'Löschen',
+      edit: 'Bearbeiten',
+      done: 'Fertig',
+      back: 'Zurück',
+      next: 'Weiter',
+      
+      // Auth
+      signIn: 'Anmelden',
+      signUp: 'Registrieren',
+      signOut: 'Abmelden',
+      email: 'E-Mail',
+      password: 'Passwort',
+      name: 'Vollständiger Name',
+      welcomeBack: 'Willkommen zurück',
+      createAccount: 'Konto erstellen',
+      signInToContinue: 'Melden Sie sich an, um mit SpotMe fortzufahren',
+      joinSpotMe: 'Treten Sie SpotMe bei und bleiben Sie verbunden',
+      dontHaveAccount: 'Haben Sie kein Konto?',
+      alreadyHaveAccount: 'Haben Sie bereits ein Konto?',
+      enterEmail: 'Geben Sie Ihre E-Mail ein',
+      enterPassword: 'Geben Sie Ihr Passwort ein',
+      enterFullName: 'Geben Sie Ihren vollständigen Namen ein',
+      createPassword: 'Erstellen Sie ein Passwort',
+      passwordMinLength: 'Das Passwort muss mindestens 6 Zeichen lang sein',
+      fillAllFields: 'Bitte füllen Sie alle Felder aus',
+      invalidCredentials: 'Ungültige E-Mail oder Passwort',
+      signingIn: 'Anmelden...',
+      creatingAccount: 'Konto erstellen...',
+      
+      // Welcome
+      stayConnected: 'Bleiben Sie in Echtzeit mit Freunden verbunden',
+      realTimeLocation: 'Echtzeit-Standort',
+      findFriends: 'Freunde finden',
+      privacyControl: 'Datenschutzkontrolle',
+      getStarted: 'Loslegen',
+      demoAccountAvailable: 'Demo-Konto verfügbar',
+      demoCredentials: 'E-Mail: demo@spotme.app\nPasswort: demo123',
+      
+      // Demo
+      demoAccountReady: 'Demo-Konto bereit',
+      defaultAccountCreated: 'Ihr Standard-Konto wurde erstellt und ist einsatzbereit',
+      accountAccess: 'Kontozugang',
+      whatsIncluded: 'Was ist enthalten',
+      demoLocationDescription: 'Demo-Standort in San Francisco mit simulierten Updates',
+      demoFriendsDescription: 'Vorkonfigurierte Freunde mit verschiedenen Online-Status',
+      privacyControlsDescription: 'Sichtbarkeit und Geistermodus-Funktionalität umschalten',
+      yourDemoFriends: 'Ihre Demo-Freunde',
+      accessDemoAccount: 'Auf Demo-Konto zugreifen',
+      manualSignIn: 'Manuelle Anmeldung',
+      useCredentialsAbove: 'Verwenden Sie die obigen Anmeldedaten, um sich anzumelden und alle Funktionen zu erkunden',
+      
+      // Navigation
+      map: 'Karte',
+      friends: 'Freunde',
+      profile: 'Profil',
+      
+      // Map
+      visible: 'Sichtbar',
+      hidden: 'Versteckt',
+      friendsNearby: '{{count}} Freunde in der Nähe',
+      friendsNearby_one: '{{count}} Freund in der Nähe',
+      friendsNearby_zero: 'Keine Freunde in der Nähe',
+      mapView: 'Kartenansicht',
+      interactiveMapMobile: 'Interaktive Karte ist auf mobilen Geräten verfügbar',
+      yourLocation: 'Ihr Standort',
+      lastSeen: 'Zuletzt gesehen: {{time}}',
+      
+      // Friends
+      noFriendsYet: 'Noch keine Freunde',
+      addFriendsDescription: 'Fügen Sie Freunde hinzu, indem Sie ihre E-Mail-Adresse oben eingeben',
+      enterFriendEmail: 'Geben Sie die E-Mail Ihres Freundes ein',
+      noPendingRequests: 'Keine ausstehenden Anfragen',
+      noSentRequests: 'Keine gesendeten Anfragen',
+      requests: 'Anfragen',
+      sent: 'Gesendet',
+      online: 'Online',
+      offline: 'Offline',
+      ghostMode: 'Geistermodus',
+      requestPending: 'Anfrage ausstehend',
+      removeFriend: 'Freund entfernen',
+      removeFriendConfirm: 'Sind Sie sicher, dass Sie {{name}} aus Ihren Freunden entfernen möchten?',
+      remove: 'Entfernen',
+      demoMode: 'Demo-Modus',
+      friendRequestsSimulated: 'Freundschaftsanfragen werden im Demo-Modus simuliert',
+      friendRemovalSimulated: 'Dies ist eine Demo - das Entfernen von Freunden wird simuliert',
+      requestsSimulated: 'Dies ist eine Demo - Anfragen werden simuliert',
+      enterEmailAddress: 'Bitte geben Sie eine E-Mail-Adresse ein',
+      
+      // Profile
+      privacyLocation: 'Datenschutz und Standort',
+      account: 'Konto',
+      visibleToFriends: 'Für Freunde sichtbar',
+      allowFriendsLocation: 'Freunden erlauben, Ihren Standort zu sehen',
+      locationTracking: 'Standortverfolgung',
+      shareRealTimeLocation: 'Ihren Echtzeit-Standort teilen',
+      ghostModeTitle: 'Geistermodus',
+      ghostModeDescription: 'Für alle Freunde unsichtbar werden',
+      ghostModeActive: 'Sie sind für Freunde unsichtbar',
+      signOutConfirm: 'Sind Sie sicher, dass Sie sich abmelden möchten?',
+      
+      // Status
+      onlineStatus: 'Online',
+      offlineStatus: 'Offline',
+      ghostModeStatus: 'Geistermodus',
+      lastSeenTime: 'Zuletzt gesehen {{time}}',
+      minutesAgo: 'vor {{count}} Min',
+      minutesAgo_one: 'vor {{count}} Min',
+      hoursAgo: 'vor {{count}} Stunden',
+      hoursAgo_one: 'vor {{count}} Stunde',
+      
+      // Settings
+      settings: 'Einstellungen',
+      appearance: 'Erscheinungsbild',
+      language: 'Sprache',
+      theme: 'Design',
+      lightMode: 'Heller Modus',
+      darkMode: 'Dunkler Modus',
+      systemMode: 'System',
+      selectLanguage: 'Sprache auswählen',
+      selectTheme: 'Design auswählen',
+      
+      // App Info
+      appVersion: 'SpotMe v1.0.0',
+      appDescription: 'Bleiben Sie in Echtzeit mit Freunden verbunden',
+    }
+  }
+};
+
+i18n
+  .use(initReactI18next)
+  .init({
+    resources,
+    lng: 'en',
+    fallbackLng: 'en',
+    interpolation: {
+      escapeValue: false,
+    },
+  });
+
+export default i18n;

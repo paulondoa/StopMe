@@ -9,15 +9,21 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useDemoLocation } from '@/contexts/DemoLocationContext';
-import { LogOut, MapPin, Eye, EyeOff, Shield, Bell } from 'lucide-react-native';
+import { LogOut, MapPin, Eye, EyeOff, Shield, Settings as SettingsIcon } from 'lucide-react-native';
+import SettingsModal from '@/components/SettingsModal';
 
 export default function ProfileScreen() {
+  const { theme } = useTheme();
+  const { t } = useLanguage();
   const { user, signOut } = useDemoAuth();
   const { isTracking, startTracking, stopTracking } = useDemoLocation();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -53,12 +59,12 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      t('signOut'),
+      t('signOutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: t('signOut'),
           style: 'destructive',
           onPress: async () => {
             stopTracking();
@@ -70,17 +76,17 @@ export default function ProfileScreen() {
   };
 
   const getStatusText = () => {
-    if (!profile) return 'Loading...';
+    if (!profile) return t('loading');
     
     switch (profile.status) {
       case 'online':
-        return 'Online';
+        return t('onlineStatus');
       case 'ghost':
-        return 'Ghost Mode';
+        return t('ghostModeStatus');
       case 'offline':
-        return 'Offline';
+        return t('offlineStatus');
       default:
-        return 'Unknown';
+        return t('offlineStatus');
     }
   };
 
@@ -101,25 +107,33 @@ export default function ProfileScreen() {
 
   if (loading || !profile) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.centered}>
-          <Text>Loading...</Text>
+          <Text style={{ color: theme.text }}>{t('loading')}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
+          <View style={styles.headerContent}>
+            <Text style={[styles.title, { color: theme.text }]}>{t('profile')}</Text>
+            <TouchableOpacity
+              style={[styles.settingsButton, { backgroundColor: theme.surface }]}
+              onPress={() => setShowSettings(true)}
+            >
+              <SettingsIcon color={theme.text} size={20} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Profile Info */}
-        <View style={styles.profileSection}>
+        <View style={[styles.profileSection, { backgroundColor: theme.surface }]}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
               <Text style={styles.avatarText}>
                 {profile.name.charAt(0).toUpperCase()}
               </Text>
@@ -131,96 +145,101 @@ export default function ProfileScreen() {
               ]} 
             />
           </View>
-          <Text style={styles.name}>{profile.name}</Text>
-          <Text style={styles.email}>{profile.email}</Text>
+          <Text style={[styles.name, { color: theme.text }]}>{profile.name}</Text>
+          <Text style={[styles.email, { color: theme.textSecondary }]}>{profile.email}</Text>
           <Text style={[styles.status, { color: getStatusColor() }]}>
             {getStatusText()}
           </Text>
         </View>
 
         {/* Settings */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Privacy & Location</Text>
+        <View style={[styles.settingsSection, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('privacyLocation')}</Text>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <View style={styles.settingIcon}>
-                <Eye color="#3B82F6" size={20} />
+              <View style={[styles.settingIcon, { backgroundColor: theme.background }]}>
+                <Eye color={theme.primary} size={20} />
               </View>
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>Visible to Friends</Text>
-                <Text style={styles.settingDescription}>
-                  Allow friends to see your location
+                <Text style={[styles.settingTitle, { color: theme.text }]}>{t('visibleToFriends')}</Text>
+                <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>
+                  {t('allowFriendsLocation')}
                 </Text>
               </View>
             </View>
             <Switch
               value={profile.visible}
               onValueChange={toggleVisibility}
-              trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
-              thumbColor={profile.visible ? '#3B82F6' : '#9CA3AF'}
+              trackColor={{ false: theme.border, true: theme.primary + '80' }}
+              thumbColor={profile.visible ? theme.primary : theme.textSecondary}
             />
           </View>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <View style={styles.settingIcon}>
-                <MapPin color="#10B981" size={20} />
+              <View style={[styles.settingIcon, { backgroundColor: theme.background }]}>
+                <MapPin color={theme.accent} size={20} />
               </View>
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>Location Tracking</Text>
-                <Text style={styles.settingDescription}>
-                  Share your real-time location
+                <Text style={[styles.settingTitle, { color: theme.text }]}>{t('locationTracking')}</Text>
+                <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>
+                  {t('shareRealTimeLocation')}
                 </Text>
               </View>
             </View>
             <Switch
               value={isTracking}
               onValueChange={toggleLocationTracking}
-              trackColor={{ false: '#E5E7EB', true: '#86EFAC' }}
-              thumbColor={isTracking ? '#10B981' : '#9CA3AF'}
+              trackColor={{ false: theme.border, true: theme.accent + '80' }}
+              thumbColor={isTracking ? theme.accent : theme.textSecondary}
             />
           </View>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <View style={styles.settingIcon}>
-                <Shield color="#8B5CF6" size={20} />
+              <View style={[styles.settingIcon, { backgroundColor: theme.background }]}>
+                <Shield color={theme.secondary} size={20} />
               </View>
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>Ghost Mode</Text>
-                <Text style={styles.settingDescription}>
-                  {profile.status === 'ghost' ? 'You are invisible to friends' : 'Become invisible to all friends'}
+                <Text style={[styles.settingTitle, { color: theme.text }]}>{t('ghostModeTitle')}</Text>
+                <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>
+                  {profile.status === 'ghost' ? t('ghostModeActive') : t('ghostModeDescription')}
                 </Text>
               </View>
             </View>
             <Switch
               value={profile.status === 'ghost'}
               onValueChange={(value) => toggleVisibility(!value)}
-              trackColor={{ false: '#E5E7EB', true: '#C4B5FD' }}
-              thumbColor={profile.status === 'ghost' ? '#8B5CF6' : '#9CA3AF'}
+              trackColor={{ false: theme.border, true: theme.secondary + '80' }}
+              thumbColor={profile.status === 'ghost' ? theme.secondary : theme.textSecondary}
             />
           </View>
         </View>
 
         {/* Account */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Account</Text>
+        <View style={[styles.settingsSection, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t('account')}</Text>
 
-          <TouchableOpacity style={styles.dangerButton} onPress={handleSignOut}>
-            <LogOut color="#EF4444" size={20} />
-            <Text style={styles.dangerButtonText}>Sign Out</Text>
+          <TouchableOpacity style={[styles.dangerButton, { backgroundColor: theme.error + '20', borderColor: theme.error + '40' }]} onPress={handleSignOut}>
+            <LogOut color={theme.error} size={20} />
+            <Text style={[styles.dangerButtonText, { color: theme.error }]}>{t('signOut')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appInfoText}>SpotMe v1.0.0</Text>
-          <Text style={styles.appInfoText}>
-            Stay connected with friends in real-time
+          <Text style={[styles.appInfoText, { color: theme.textSecondary }]}>{t('appVersion')}</Text>
+          <Text style={[styles.appInfoText, { color: theme.textSecondary }]}>
+            {t('appDescription')}
           </Text>
         </View>
       </ScrollView>
+      
+      <SettingsModal
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -228,7 +247,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
   },
   scrollView: {
     flex: 1,
@@ -242,15 +260,22 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 16,
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: '#111827',
+  },
+  settingsButton: {
+    padding: 12,
+    borderRadius: 12,
   },
   profileSection: {
     alignItems: 'center',
     padding: 24,
-    backgroundColor: 'white',
     marginHorizontal: 24,
     borderRadius: 16,
     marginBottom: 24,
@@ -268,7 +293,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#3B82F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -290,13 +314,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 22,
     fontFamily: 'Inter-Bold',
-    color: '#111827',
     marginBottom: 4,
   },
   email: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     marginBottom: 8,
   },
   status: {
@@ -304,7 +326,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
   },
   settingsSection: {
-    backgroundColor: 'white',
     marginHorizontal: 24,
     borderRadius: 16,
     padding: 16,
@@ -318,7 +339,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 16,
   },
   settingItem: {
@@ -327,7 +347,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: 'transparent',
   },
   settingInfo: {
     flexDirection: 'row',
@@ -339,7 +359,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -349,13 +368,11 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   dangerButton: {
     flexDirection: 'row',
@@ -364,14 +381,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: '#FECACA',
   },
   dangerButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#EF4444',
   },
   appInfo: {
     alignItems: 'center',
@@ -381,7 +395,6 @@ const styles = StyleSheet.create({
   appInfoText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#9CA3AF',
     textAlign: 'center',
   },
 });

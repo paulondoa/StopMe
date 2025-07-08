@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { DemoAuthProvider } from '@/contexts/DemoAuthContext';
 import { DemoLocationProvider } from '@/contexts/DemoLocationContext';
 import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
@@ -29,16 +31,20 @@ export default function RootLayout() {
   }
 
   return (
-    <DemoAuthProvider>
-      <DemoLocationProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="demo" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </DemoLocationProvider>
-    </DemoAuthProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <DemoAuthProvider>
+          <DemoLocationProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="demo" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style="auto" />
+          </DemoLocationProvider>
+        </DemoAuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
