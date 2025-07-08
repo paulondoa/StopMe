@@ -49,6 +49,12 @@ export default function MapScreen() {
     }
   };
 
+  const refreshLocations = () => {
+    console.log('Refreshing locations...');
+    // In a real app, this would refresh friend locations
+    // For demo purposes, we just log the action
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
