@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, Mail, Lock, User, CircleAlert as AlertCircle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SignUp() {

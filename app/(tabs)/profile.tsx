@@ -15,20 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useDemoLocation } from '@/contexts/DemoLocationContext';
-import { 
-  LogOut, 
-  MapPin, 
-  Eye, 
-  EyeOff, 
-  Shield, 
-  Settings as SettingsIcon,
-  User,
-  Bell,
-  Globe,
-  Palette,
-  ChevronRight,
-  Edit3
-} from 'lucide-react-native';
+import { LogOut, MapPin, Eye, EyeOff, Shield, Settings as SettingsIcon, User, Bell, Globe, Palette, ChevronRight, CreditCard as Edit3 } from 'lucide-react-native';
 import SettingsModal from '@/components/SettingsModal';
 import { LinearGradient } from 'expo-linear-gradient';
 
