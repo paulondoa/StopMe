@@ -8,47 +8,75 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
-import { UserPlus, Check, X, Search, Users } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { UserPlus, Check, X, Search, Users, MessageCircle, MapPin, Clock } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 export default function FriendsScreen() {
   const { friends } = useDemoAuth();
+  const { theme, isDark } = useTheme();
+  const { t } = useLanguage();
+  
   const [pendingRequests] = useState([]);
   const [sentRequests] = useState([]);
-
   const [searchEmail, setSearchEmail] = useState('');
   const [activeTab, setActiveTab] = useState<'friends' | 'pending' | 'sent'>('friends');
 
+  // Animations
+  const fadeAnim = new Animated.Value(0);
+  const slideAnim = new Animated.Value(30);
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   const handleSendRequest = async () => {
     if (!searchEmail.trim()) {
-      Alert.alert('Error', 'Please enter an email address');
+      Alert.alert('Erreur', 'Veuillez entrer une adresse email');
       return;
     }
 
-    Alert.alert('Demo Mode', 'Friend requests are simulated in demo mode');
+    Alert.alert('Mode Démo', 'Les demandes d\'amis sont simulées en mode démo');
     setSearchEmail('');
   };
 
   const handleAcceptRequest = async (requestId: string) => {
-    Alert.alert('Demo Mode', 'This is a demo - requests are simulated');
+    Alert.alert('Mode Démo', 'Ceci est une démo - les demandes sont simulées');
   };
 
   const handleRejectRequest = async (requestId: string) => {
-    Alert.alert('Demo Mode', 'This is a demo - requests are simulated');
+    Alert.alert('Mode Démo', 'Ceci est une démo - les demandes sont simulées');
   };
 
   const handleRemoveFriend = (friendshipId: string, friendName: string) => {
     Alert.alert(
-      'Remove Friend',
-      `Are you sure you want to remove ${friendName} from your friends?`,
+      'Supprimer l\'ami',
+      `Êtes-vous sûr de vouloir supprimer ${friendName} de vos amis ?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Annuler', style: 'cancel' },
         {
-          text: 'Remove',
+          text: 'Supprimer',
           style: 'destructive',
           onPress: () => {
-            Alert.alert('Demo Mode', 'This is a demo - friend removal is simulated');
+            Alert.alert('Mode Démo', 'Ceci est une démo - la suppression d\'ami est simulée');
           },
         },
       ]
@@ -58,205 +86,303 @@ export default function FriendsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
-        return '#10B981';
+        return theme.success;
       case 'offline':
-        return '#9CA3AF';
+        return theme.textSecondary;
       case 'ghost':
-        return '#8B5CF6';
+        return theme.secondary;
       default:
-        return '#3B82F6';
+        return theme.primary;
     }
   };
 
-  const renderFriend = ({ item }: { item: any }) => (
-    <View style={styles.friendCard}>
-      <View style={styles.friendInfo}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {item.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View 
-            style={[
-              styles.statusIndicator, 
-              { backgroundColor: getStatusColor(item.status) }
-            ]} 
-          />
-        </View>
-        <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{item.name}</Text>
-          <Text style={styles.friendEmail}>{item.email}</Text>
-          <Text style={styles.friendStatus}>
-            {item.status === 'online' ? 'Online' : 
-             item.status === 'ghost' ? 'Ghost Mode' : 
-             `Last seen ${new Date(item.last_seen).toLocaleDateString()}`}
-          </Text>
-        </View>
-      </View>
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={() => handleRemoveFriend(item.id, item.name)}
+  const getStatusText = (status: string, lastSeen: string) => {
+    switch (status) {
+      case 'online':
+        return 'En ligne maintenant';
+      case 'ghost':
+        return 'Mode fantôme';
+      default:
+        return `Vu ${new Date(lastSeen).toLocaleDateString()}`;
+    }
+  };
+
+  const FriendCard = ({ item, index }: { item: any; index: number }) => {
+    const cardAnim = new Animated.Value(0);
+
+    React.useEffect(() => {
+      Animated.timing(cardAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 100,
+        useNativeDriver: true,
+      }).start();
+    }, []);
+
+    return (
+      <Animated.View
+        style={[
+          styles.friendCard,
+          { 
+            backgroundColor: theme.surface,
+            opacity: cardAnim,
+            transform: [
+              {
+                translateY: cardAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
+          }
+        ]}
       >
-        <X color="#EF4444" size={20} />
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderPendingRequest = ({ item }: { item: any }) => (
-    <View style={styles.requestCard}>
-      <View style={styles.friendInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{item.name}</Text>
-          <Text style={styles.friendEmail}>{item.email}</Text>
-        </View>
-      </View>
-      <View style={styles.requestActions}>
-        <TouchableOpacity
-          style={styles.acceptButton}
-          onPress={() => handleAcceptRequest(item.id)}
+        <LinearGradient
+          colors={isDark ? [`${theme.primary}10`, `${theme.secondary}10`] : [`${theme.primary}05`, `${theme.secondary}05`]}
+          style={styles.cardGradient}
         >
-          <Check color="white" size={20} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.rejectButton}
-          onPress={() => handleRejectRequest(item.id)}
-        >
-          <X color="white" size={20} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+          <View style={styles.friendInfo}>
+            <View style={styles.avatarContainer}>
+              <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+                <Text style={[styles.avatarText, { color: theme.surface }]}>
+                  {item.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View 
+                style={[
+                  styles.statusIndicator, 
+                  { backgroundColor: getStatusColor(item.status) }
+                ]} 
+              />
+            </View>
+            
+            <View style={styles.friendDetails}>
+              <Text style={[styles.friendName, { color: theme.text }]}>
+                {item.name}
+              </Text>
+              <Text style={[styles.friendEmail, { color: theme.textSecondary }]}>
+                {item.email}
+              </Text>
+              <View style={styles.statusContainer}>
+                <Clock color={theme.textSecondary} size={12} />
+                <Text style={[styles.friendStatus, { color: theme.textSecondary }]}>
+                  {getStatusText(item.status, item.last_seen)}
+                </Text>
+              </View>
+            </View>
+          </View>
 
-  const renderSentRequest = ({ item }: { item: any }) => (
-    <View style={styles.friendCard}>
-      <View style={styles.friendInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.friendDetails}>
-          <Text style={styles.friendName}>{item.name}</Text>
-          <Text style={styles.friendEmail}>{item.email}</Text>
-          <Text style={styles.pendingText}>Request pending</Text>
-        </View>
-      </View>
-    </View>
+          <View style={styles.friendActions}>
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: `${theme.primary}20` }]}
+              onPress={() => {}}
+            >
+              <MessageCircle color={theme.primary} size={18} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: `${theme.accent}20` }]}
+              onPress={() => {}}
+            >
+              <MapPin color={theme.accent} size={18} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: `${theme.error}20` }]}
+              onPress={() => handleRemoveFriend(item.id, item.name)}
+            >
+              <X color={theme.error} size={18} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </Animated.View>
+    );
+  };
+
+  const TabButton = ({ 
+    title, 
+    count, 
+    isActive, 
+    onPress 
+  }: {
+    title: string;
+    count: number;
+    isActive: boolean;
+    onPress: () => void;
+  }) => (
+    <TouchableOpacity
+      style={[
+        styles.tab,
+        isActive && [styles.activeTab, { backgroundColor: theme.primary }]
+      ]}
+      onPress={onPress}
+    >
+      <Text style={[
+        styles.tabText,
+        { color: isActive ? theme.surface : theme.textSecondary },
+        isActive && styles.activeTabText
+      ]}>
+        {title} ({count})
+      </Text>
+    </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Friends</Text>
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Header */}
+      <LinearGradient
+        colors={isDark ? [theme.background, 'transparent'] : [`${theme.primary}10`, 'transparent']}
+        style={styles.headerGradient}
+      >
+        <Animated.View 
+          style={[
+            styles.header,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <Text style={[styles.title, { color: theme.text }]}>
+            Mes Amis
+          </Text>
+          <View style={styles.headerStats}>
+            <View style={[styles.statBadge, { backgroundColor: `${theme.success}20` }]}>
+              <Text style={[styles.statText, { color: theme.success }]}>
+                {friends.filter(f => f.status === 'online').length} en ligne
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+      </LinearGradient>
 
-      {/* Add Friend Section */}
-      <View style={styles.addFriendSection}>
-        <View style={styles.searchContainer}>
-          <Search color="#9CA3AF" size={20} />
+      {/* Search Section */}
+      <Animated.View 
+        style={[
+          styles.searchSection,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
+      >
+        <View style={[styles.searchContainer, { backgroundColor: theme.surface }]}>
+          <Search color={theme.textSecondary} size={20} />
           <TextInput
-            style={styles.searchInput}
-            placeholder="Enter friend's email"
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Rechercher par email..."
+            placeholderTextColor={theme.textSecondary}
             value={searchEmail}
             onChangeText={setSearchEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          <TouchableOpacity style={styles.addButton} onPress={handleSendRequest}>
-            <UserPlus color="white" size={20} />
+          <TouchableOpacity 
+            style={[styles.addButton, { backgroundColor: theme.primary }]} 
+            onPress={handleSendRequest}
+          >
+            <UserPlus color={theme.surface} size={20} />
           </TouchableOpacity>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
+      <Animated.View 
+        style={[
+          styles.tabContainer,
+          { 
+            backgroundColor: theme.surface,
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
+      >
+        <TabButton
+          title="Amis"
+          count={friends.length}
+          isActive={activeTab === 'friends'}
           onPress={() => setActiveTab('friends')}
-        >
-          <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
-            Friends ({friends.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+        />
+        <TabButton
+          title="Demandes"
+          count={pendingRequests.length}
+          isActive={activeTab === 'pending'}
           onPress={() => setActiveTab('pending')}
-        >
-          <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
-            Requests ({pendingRequests.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'sent' && styles.activeTab]}
+        />
+        <TabButton
+          title="Envoyées"
+          count={sentRequests.length}
+          isActive={activeTab === 'sent'}
           onPress={() => setActiveTab('sent')}
-        >
-          <Text style={[styles.tabText, activeTab === 'sent' && styles.activeTabText]}>
-            Sent ({sentRequests.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+        />
+      </Animated.View>
 
       {/* Content */}
       <View style={styles.content}>
         {activeTab === 'friends' && (
           <>
             {friends.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Users color="#9CA3AF" size={48} />
-                <Text style={styles.emptyTitle}>No friends yet</Text>
-                <Text style={styles.emptySubtitle}>
-                  Add friends by entering their email address above
+              <Animated.View 
+                style={[
+                  styles.emptyState,
+                  {
+                    opacity: fadeAnim,
+                    transform: [{ translateY: slideAnim }],
+                  }
+                ]}
+              >
+                <View style={[styles.emptyIcon, { backgroundColor: `${theme.primary}20` }]}>
+                  <Users color={theme.primary} size={48} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                  Aucun ami pour le moment
                 </Text>
-              </View>
+                <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                  Ajoutez des amis en saisissant leur adresse email ci-dessus
+                </Text>
+              </Animated.View>
             ) : (
               <FlatList
                 data={friends}
-                renderItem={renderFriend}
+                renderItem={({ item, index }) => <FriendCard item={item} index={index} />}
                 keyExtractor={(item) => item.id}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.listContainer}
               />
             )}
           </>
         )}
 
         {activeTab === 'pending' && (
-          <>
-            {pendingRequests.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>No pending requests</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={pendingRequests}
-                renderItem={renderPendingRequest}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-          </>
+          <Animated.View 
+            style={[
+              styles.emptyState,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}
+          >
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+              Aucune demande en attente
+            </Text>
+          </Animated.View>
         )}
 
         {activeTab === 'sent' && (
-          <>
-            {sentRequests.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>No sent requests</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={sentRequests}
-                renderItem={renderSentRequest}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-          </>
+          <Animated.View 
+            style={[
+              styles.emptyState,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}
+          >
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+              Aucune demande envoyée
+            </Text>
+          </Animated.View>
         )}
       </View>
     </SafeAreaView>
@@ -266,197 +392,202 @@ export default function FriendsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+  },
+  headerGradient: {
+    paddingTop: 16,
+    paddingBottom: 20,
   },
   header: {
-    padding: 24,
-    paddingTop: 16,
+    paddingHorizontal: 24,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontFamily: 'Inter-Bold',
-    color: '#111827',
+    marginBottom: 12,
   },
-  addFriendSection: {
-    padding: 24,
-    paddingTop: 0,
+  headerStats: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+  },
+  searchSection: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#111827',
   },
   addButton: {
-    backgroundColor: '#3B82F6',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 24,
-    backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 4,
+    marginBottom: 20,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   activeTab: {
-    backgroundColor: '#3B82F6',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   tabText: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: '#6B7280',
   },
   activeTabText: {
-    color: 'white',
+    fontFamily: 'Inter-Bold',
   },
   content: {
     flex: 1,
-    padding: 24,
+    paddingHorizontal: 24,
+  },
+  listContainer: {
+    paddingBottom: 100,
   },
   friendCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 2,
+    borderRadius: 20,
+    marginBottom: 16,
+    overflow: 'hidden',
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 6,
   },
-  requestCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+  cardGradient: {
+    padding: 20,
   },
   friendInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
+    marginBottom: 16,
   },
   avatarContainer: {
     position: 'relative',
+    marginRight: 16,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#3B82F6',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   avatarText: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'Inter-Bold',
-    color: 'white',
   },
   statusIndicator: {
     position: 'absolute',
     bottom: 2,
     right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
     borderColor: 'white',
   },
   friendDetails: {
     flex: 1,
   },
   friendName: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#111827',
-    marginBottom: 2,
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 4,
   },
   friendEmail: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    marginBottom: 2,
+    marginBottom: 6,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   friendStatus: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#9CA3AF',
   },
-  pendingText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#F59E0B',
-  },
-  removeButton: {
-    padding: 8,
-  },
-  requestActions: {
+  friendActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
-  acceptButton: {
-    backgroundColor: '#10B981',
-    padding: 8,
-    borderRadius: 8,
-  },
-  rejectButton: {
-    backgroundColor: '#EF4444',
-    padding: 8,
-    borderRadius: 8,
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    paddingHorizontal: 32,
+  },
+  emptyIcon: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#374151',
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     textAlign: 'center',
-    paddingHorizontal: 32,
+    lineHeight: 24,
   },
 });
