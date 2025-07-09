@@ -8,29 +8,56 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { ArrowLeft, Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SignUp() {
   const router = useRouter();
   const { signUp } = useDemoAuth();
+  const { theme, isDark } = useTheme();
+  const { t } = useLanguage();
+  
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const fadeAnim = new Animated.Value(0);
+  const slideAnim = new Animated.Value(50);
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleSignUp = async () => {
     if (!name || !email || !password) {
-      setError('Please fill in all fields');
+      setError(t('fillAllFields'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('passwordMinLength'));
       return;
     }
 
@@ -46,102 +73,206 @@ export default function SignUp() {
     setLoading(false);
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft color="#374151" size={24} />
-        </TouchableOpacity>
+  const getInputStyle = (fieldName: string) => [
+    styles.input,
+    {
+      backgroundColor: theme.surface,
+      borderColor: focusedField === fieldName ? theme.primary : theme.border,
+      color: theme.text,
+    }
+  ];
 
-        <View style={styles.content}>
+  const getPasswordStrength = () => {
+    if (password.length === 0) return { strength: 0, color: theme.textSecondary, text: '' };
+    if (password.length < 6) return { strength: 1, color: theme.error, text: 'Faible' };
+    if (password.length < 8) return { strength: 2, color: theme.warning, text: 'Moyen' };
+    return { strength: 3, color: theme.success, text: 'Fort' };
+  };
+
+  const passwordStrength = getPasswordStrength();
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <LinearGradient
+        colors={isDark ? ['#1F2937', '#111827'] : ['#F8FAFC', '#E2E8F0']}
+        style={styles.gradient}
+      >
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join SpotMe and stay connected</Text>
+            <TouchableOpacity
+              style={[styles.backButton, { backgroundColor: theme.surface }]}
+              onPress={() => router.back()}
+            >
+              <ArrowLeft color={theme.text} size={24} />
+            </TouchableOpacity>
           </View>
 
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <Animated.View 
+              style={[
+                styles.content,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                }
+              ]}
+            >
+              {/* Logo Section */}
+              <View style={styles.logoSection}>
+                <View style={[styles.logoContainer, { backgroundColor: theme.secondary }]}>
+                  <User color={theme.surface} size={32} />
+                </View>
+                <Text style={[styles.title, { color: theme.text }]}>
+                  {t('createAccount')}
+                </Text>
+                <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                  {t('joinSpotMe')}
+                </Text>
+              </View>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your full name"
-                autoComplete="name"
-              />
-            </View>
+              {/* Error Message */}
+              {error ? (
+                <Animated.View style={[styles.errorContainer, { backgroundColor: `${theme.error}20`, borderColor: `${theme.error}40` }]}>
+                  <AlertCircle color={theme.error} size={20} />
+                  <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+                </Animated.View>
+              ) : null}
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
-            </View>
+              {/* Form */}
+              <View style={styles.form}>
+                <View style={styles.inputContainer}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    {t('name')}
+                  </Text>
+                  <View style={styles.inputWrapper}>
+                    <User color={theme.textSecondary} size={20} style={styles.inputIcon} />
+                    <TextInput
+                      style={getInputStyle('name')}
+                      value={name}
+                      onChangeText={setName}
+                      placeholder={t('enterFullName')}
+                      placeholderTextColor={theme.textSecondary}
+                      autoComplete="name"
+                      onFocus={() => setFocusedField('name')}
+                      onBlur={() => setFocusedField(null)}
+                    />
+                  </View>
+                </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Create a password"
-                  secureTextEntry={!showPassword}
-                  autoComplete="new-password"
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff color="#9CA3AF" size={20} />
-                  ) : (
-                    <Eye color="#9CA3AF" size={20} />
+                <View style={styles.inputContainer}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    {t('email')}
+                  </Text>
+                  <View style={styles.inputWrapper}>
+                    <Mail color={theme.textSecondary} size={20} style={styles.inputIcon} />
+                    <TextInput
+                      style={getInputStyle('email')}
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder={t('enterEmail')}
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={[styles.inputLabel, { color: theme.text }]}>
+                    {t('password')}
+                  </Text>
+                  <View style={styles.inputWrapper}>
+                    <Lock color={theme.textSecondary} size={20} style={styles.inputIcon} />
+                    <TextInput
+                      style={[getInputStyle('password'), styles.passwordInput]}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder={t('createPassword')}
+                      placeholderTextColor={theme.textSecondary}
+                      secureTextEntry={!showPassword}
+                      autoComplete="new-password"
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff color={theme.textSecondary} size={20} />
+                      ) : (
+                        <Eye color={theme.textSecondary} size={20} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* Password Strength Indicator */}
+                  {password.length > 0 && (
+                    <View style={styles.passwordStrength}>
+                      <View style={styles.strengthBar}>
+                        <View 
+                          style={[
+                            styles.strengthFill,
+                            { 
+                              width: `${(passwordStrength.strength / 3) * 100}%`,
+                              backgroundColor: passwordStrength.color 
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <Text style={[styles.strengthText, { color: passwordStrength.color }]}>
+                        {passwordStrength.text}
+                      </Text>
+                    </View>
                   )}
+                  
+                  <Text style={[styles.passwordHint, { color: theme.textSecondary }]}>
+                    {t('passwordMinLength')}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.signUpButton,
+                    { backgroundColor: theme.secondary },
+                    loading && styles.buttonDisabled
+                  ]}
+                  onPress={handleSignUp}
+                  disabled={loading}
+                >
+                  <LinearGradient
+                    colors={[theme.secondary, theme.primary]}
+                    style={styles.buttonGradient}
+                  >
+                    <Text style={[styles.signUpButtonText, { color: theme.surface }]}>
+                      {loading ? t('creatingAccount') : t('createAccount')}
+                    </Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.passwordHint}>
-                Password must be at least 6 characters
-              </Text>
-            </View>
 
-            <TouchableOpacity
-              style={[styles.signUpButton, loading && styles.buttonDisabled]}
-              onPress={handleSignUp}
-              disabled={loading}
-            >
-              <Text style={styles.signUpButtonText}>
-                {loading ? 'Creating Account...' : 'Create Account'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.replace('/(auth)/signin')}>
-              <Text style={styles.footerLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+              {/* Footer */}
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+                  {t('alreadyHaveAccount')} 
+                </Text>
+                <TouchableOpacity onPress={() => router.replace('/(auth)/signin')}>
+                  <Text style={[styles.footerLink, { color: theme.primary }]}>
+                    {t('signIn')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -149,119 +280,184 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+  },
+  gradient: {
+    flex: 1,
   },
   keyboardView: {
     flex: 1,
   },
-  backButton: {
-    padding: 16,
-    alignSelf: 'flex-start',
-  },
-  content: {
+  scrollView: {
     flex: 1,
-    padding: 24,
-    justifyContent: 'space-between',
   },
   header: {
-    marginBottom: 32,
+    padding: 20,
+    paddingTop: 10,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  content: {
+    padding: 24,
+    paddingTop: 0,
+  },
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontFamily: 'Inter-Bold',
-    color: '#111827',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
-    padding: 12,
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FECACA',
     marginBottom: 24,
+    gap: 12,
   },
   errorText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#DC2626',
+    flex: 1,
   },
   form: {
-    gap: 20,
+    gap: 24,
+    marginBottom: 32,
   },
   inputContainer: {
     gap: 8,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#374151',
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    position: 'relative',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 16,
+    borderWidth: 2,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 50,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    backgroundColor: '#F9FAFB',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    backgroundColor: '#F9FAFB',
+  inputIcon: {
+    position: 'absolute',
+    left: 16,
+    top: 18,
+    zIndex: 1,
   },
   passwordInput: {
-    flex: 1,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    paddingRight: 60,
   },
   eyeButton: {
-    padding: 16,
+    position: 'absolute',
+    right: 16,
+    top: 16,
+    padding: 4,
+  },
+  passwordStrength: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+  },
+  strengthBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  strengthFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  strengthText: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    minWidth: 40,
   },
   passwordHint: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
     marginTop: 4,
+    marginLeft: 4,
   },
   signUpButton: {
-    backgroundColor: '#3B82F6',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
     marginTop: 8,
+  },
+  buttonGradient: {
+    paddingVertical: 18,
+    alignItems: 'center',
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   signUpButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: 'white',
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    gap: 4,
+    paddingBottom: 40,
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   footerLink: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#3B82F6',
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
   },
 });
