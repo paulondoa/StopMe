@@ -39,7 +39,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         setCurrentLanguage(savedLanguage as SupportedLanguage);
       } else {
         // Use device locale as fallback
-        const deviceLocale = Localization.locale.split('-')[0];
+        const deviceLocale = Localization.locale?.split('-')[0];
         const supportedLocale = supportedLanguages.find(lang => lang.code === deviceLocale);
         
         if (supportedLocale) {
