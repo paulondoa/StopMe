@@ -24,3 +24,4 @@ export default function Index() {
       <ActivityIndicator size="large" color={theme.primary} />
     </View>
   );
+}
