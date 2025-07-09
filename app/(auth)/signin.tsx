@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, Mail, Lock, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
