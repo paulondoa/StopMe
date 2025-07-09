@@ -12,172 +12,220 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Users, Shield, Key, User, Mail } from 'lucide-react-native';
 import { DEFAULT_ACCOUNT } from '@/lib/defaultAuth';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function DemoAccess() {
   const router = useRouter();
   const { signIn } = useDemoAuth();
+  const { theme, isDark } = useTheme();
+  const { t } = useLanguage();
 
   const handleGetStarted = async () => {
-    // Auto-sign in with demo credentials
-    const { error } = await signIn(DEFAULT_ACCOUNT.email, DEFAULT_ACCOUNT.password);
-    
-    if (!error) {
-      // Navigate to main app after successful sign in
-      router.replace('/(tabs)');
-    } else {
-      // If auto-sign in fails, go to sign in page
+    try {
+      // Auto-sign in with demo credentials
+      const { error } = await signIn(DEFAULT_ACCOUNT.email, DEFAULT_ACCOUNT.password);
+      
+      if (!error) {
+        // Navigate to main app after successful sign in
+        router.replace('/(tabs)');
+      } else {
+        console.error('Demo sign in error:', error);
+        // If auto-sign in fails, go to sign in page
+        router.push('/(auth)/signin');
+      }
+    } catch (err) {
+      console.error('Demo access error:', err);
       router.push('/(auth)/signin');
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <LinearGradient
-        colors={['#3B82F6', '#8B5CF6']}
+        colors={isDark ? ['#1F2937', '#374151'] : ['#3B82F6', '#8B5CF6']}
         style={styles.gradient}
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.content}>
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <MapPin color="white" size={48} />
-                <Text style={styles.logo}>SpotMe</Text>
+                <MapPin color={theme.surface} size={48} />
+                <Text style={[styles.logo, { color: theme.surface }]}>SpotMe</Text>
               </View>
               <Text style={styles.tagline}>
-                Demo Account Ready
+                {t('demoAccountReady')}
               </Text>
               <Text style={styles.subtitle}>
-                Your default account has been created and is ready to use
+                {t('defaultAccountCreated')}
               </Text>
             </View>
 
             {/* Account Credentials Card */}
-            <View style={styles.credentialsCard}>
+            <View style={[styles.credentialsCard, { backgroundColor: theme.surface }]}>
               <View style={styles.cardHeader}>
-                <Key color="#3B82F6" size={24} />
-                <Text style={styles.cardTitle}>Account Access</Text>
+                <Key color={theme.primary} size={24} />
+                <Text style={[styles.cardTitle, { color: theme.text }]}>
+                  {t('accountAccess')}
+                </Text>
               </View>
               
               <View style={styles.credentialItem}>
-                <View style={styles.credentialIcon}>
-                  <Mail color="#6B7280" size={20} />
+                <View style={[styles.credentialIcon, { backgroundColor: theme.background }]}>
+                  <Mail color={theme.textSecondary} size={20} />
                 </View>
                 <View style={styles.credentialInfo}>
-                  <Text style={styles.credentialLabel}>Email</Text>
-                  <Text style={styles.credentialValue}>{DEFAULT_ACCOUNT.email}</Text>
+                  <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                    {t('email')}
+                  </Text>
+                  <Text style={[styles.credentialValue, { color: theme.text }]}>
+                    {DEFAULT_ACCOUNT.email}
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.credentialItem}>
-                <View style={styles.credentialIcon}>
-                  <Key color="#6B7280" size={20} />
+                <View style={[styles.credentialIcon, { backgroundColor: theme.background }]}>
+                  <Key color={theme.textSecondary} size={20} />
                 </View>
                 <View style={styles.credentialInfo}>
-                  <Text style={styles.credentialLabel}>Password</Text>
-                  <Text style={styles.credentialValue}>{DEFAULT_ACCOUNT.password}</Text>
+                  <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                    {t('password')}
+                  </Text>
+                  <Text style={[styles.credentialValue, { color: theme.text }]}>
+                    {DEFAULT_ACCOUNT.password}
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.credentialItem}>
-                <View style={styles.credentialIcon}>
-                  <User color="#6B7280" size={20} />
+                <View style={[styles.credentialIcon, { backgroundColor: theme.background }]}>
+                  <User color={theme.textSecondary} size={20} />
                 </View>
                 <View style={styles.credentialInfo}>
-                  <Text style={styles.credentialLabel}>Name</Text>
-                  <Text style={styles.credentialValue}>{DEFAULT_ACCOUNT.name}</Text>
+                  <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                    {t('name')}
+                  </Text>
+                  <Text style={[styles.credentialValue, { color: theme.text }]}>
+                    {DEFAULT_ACCOUNT.name}
+                  </Text>
                 </View>
               </View>
             </View>
 
             {/* Features Preview */}
-            <View style={styles.featuresCard}>
-              <Text style={styles.featuresTitle}>What's Included</Text>
+            <View style={[styles.featuresCard, { backgroundColor: `${theme.primary}20` }]}>
+              <Text style={[styles.featuresTitle, { color: theme.surface }]}>
+                {t('whatsIncluded')}
+              </Text>
               
               <View style={styles.feature}>
-                <MapPin color="white" size={24} />
+                <MapPin color={theme.surface} size={24} />
                 <View style={styles.featureText}>
-                  <Text style={styles.featureTitle}>Real-time Location</Text>
-                  <Text style={styles.featureDescription}>
-                    Demo location in San Francisco with simulated updates
+                  <Text style={[styles.featureTitle, { color: theme.surface }]}>
+                    {t('realTimeLocation')}
+                  </Text>
+                  <Text style={[styles.featureDescription, { color: `${theme.surface}CC` }]}>
+                    {t('demoLocationDescription')}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.feature}>
-                <Users color="white" size={24} />
+                <Users color={theme.surface} size={24} />
                 <View style={styles.featureText}>
-                  <Text style={styles.featureTitle}>3 Demo Friends</Text>
-                  <Text style={styles.featureDescription}>
-                    Pre-configured friends with different online statuses
+                  <Text style={[styles.featureTitle, { color: theme.surface }]}>
+                    3 {t('friends')}
+                  </Text>
+                  <Text style={[styles.featureDescription, { color: `${theme.surface}CC` }]}>
+                    {t('demoFriendsDescription')}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.feature}>
-                <Shield color="white" size={24} />
+                <Shield color={theme.surface} size={24} />
                 <View style={styles.featureText}>
-                  <Text style={styles.featureTitle}>Privacy Controls</Text>
-                  <Text style={styles.featureDescription}>
-                    Toggle visibility and ghost mode functionality
+                  <Text style={[styles.featureTitle, { color: theme.surface }]}>
+                    {t('privacyControl')}
+                  </Text>
+                  <Text style={[styles.featureDescription, { color: `${theme.surface}CC` }]}>
+                    {t('privacyControlsDescription')}
                   </Text>
                 </View>
               </View>
             </View>
 
             {/* Demo Friends Preview */}
-            <View style={styles.friendsPreview}>
-              <Text style={styles.previewTitle}>Your Demo Friends</Text>
+            <View style={[styles.friendsPreview, { backgroundColor: theme.surface }]}>
+              <Text style={[styles.previewTitle, { color: theme.text }]}>
+                {t('yourDemoFriends')}
+              </Text>
               
               <View style={styles.friendItem}>
-                <View style={styles.friendAvatar}>
-                  <Text style={styles.friendAvatarText}>S</Text>
+                <View style={[styles.friendAvatar, { backgroundColor: theme.primary }]}>
+                  <Text style={[styles.friendAvatarText, { color: theme.surface }]}>S</Text>
                 </View>
                 <View style={styles.friendInfo}>
-                  <Text style={styles.friendName}>Sarah Johnson</Text>
-                  <Text style={styles.friendStatus}>Online • 5 min ago</Text>
+                  <Text style={[styles.friendName, { color: theme.text }]}>Sarah Johnson</Text>
+                  <Text style={[styles.friendStatus, { color: theme.textSecondary }]}>
+                    {t('online')} • 5 min ago
+                  </Text>
                 </View>
-                <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
+                <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
               </View>
 
               <View style={styles.friendItem}>
-                <View style={styles.friendAvatar}>
-                  <Text style={styles.friendAvatarText}>M</Text>
+                <View style={[styles.friendAvatar, { backgroundColor: theme.primary }]}>
+                  <Text style={[styles.friendAvatarText, { color: theme.surface }]}>M</Text>
                 </View>
                 <View style={styles.friendInfo}>
-                  <Text style={styles.friendName}>Mike Chen</Text>
-                  <Text style={styles.friendStatus}>Ghost Mode • 15 min ago</Text>
+                  <Text style={[styles.friendName, { color: theme.text }]}>Mike Chen</Text>
+                  <Text style={[styles.friendStatus, { color: theme.textSecondary }]}>
+                    {t('ghostMode')} • 15 min ago
+                  </Text>
                 </View>
-                <View style={[styles.statusDot, { backgroundColor: '#8B5CF6' }]} />
+                <View style={[styles.statusDot, { backgroundColor: theme.secondary }]} />
               </View>
 
               <View style={styles.friendItem}>
-                <View style={styles.friendAvatar}>
-                  <Text style={styles.friendAvatarText}>E</Text>
+                <View style={[styles.friendAvatar, { backgroundColor: theme.primary }]}>
+                  <Text style={[styles.friendAvatarText, { color: theme.surface }]}>E</Text>
                 </View>
                 <View style={styles.friendInfo}>
-                  <Text style={styles.friendName}>Emma Wilson</Text>
-                  <Text style={styles.friendStatus}>Offline • 2 hours ago</Text>
+                  <Text style={[styles.friendName, { color: theme.text }]}>Emma Wilson</Text>
+                  <Text style={[styles.friendStatus, { color: theme.textSecondary }]}>
+                    {t('offline')} • 2 hours ago
+                  </Text>
                 </View>
-                <View style={[styles.statusDot, { backgroundColor: '#9CA3AF' }]} />
+                <View style={[styles.statusDot, { backgroundColor: theme.textSecondary }]} />
               </View>
             </View>
 
             <TouchableOpacity
-              style={styles.getStartedButton}
+              style={[styles.getStartedButton, { backgroundColor: theme.surface }]}
               onPress={handleGetStarted}
             >
-              <Text style={styles.getStartedButtonText}>Access Demo Account</Text>
+              <Text style={[styles.getStartedButtonText, { color: theme.primary }]}>
+                {t('accessDemoAccount')}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.manualSignInButton}
+              style={[styles.manualSignInButton, { 
+                backgroundColor: `${theme.surface}33`,
+                borderColor: `${theme.surface}4D`
+              }]}
               onPress={() => router.push('/(auth)/signin')}
             >
-              <Text style={styles.manualSignInButtonText}>Manual Sign In</Text>
+              <Text style={[styles.manualSignInButtonText, { color: theme.surface }]}>
+                {t('manualSignIn')}
+              </Text>
             </TouchableOpacity>
+            
             <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Use the credentials above to sign in and explore all features
+              <Text style={[styles.footerText, { color: `${theme.surface}CC` }]}>
+                {t('useCredentialsAbove')}
               </Text>
             </View>
           </View>
@@ -230,10 +278,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   credentialsCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -244,21 +296,17 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: '#111827',
   },
   credentialItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   credentialIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -268,16 +316,13 @@ const styles = StyleSheet.create({
   credentialLabel: {
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
-    color: '#6B7280',
     marginBottom: 2,
   },
   credentialValue: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
   },
   featuresCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -285,7 +330,6 @@ const styles = StyleSheet.create({
   featuresTitle: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: 'white',
     marginBottom: 16,
   },
   feature: {
@@ -300,25 +344,26 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: 'white',
     marginBottom: 4,
   },
   featureDescription: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: 20,
   },
   friendsPreview: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 32,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   previewTitle: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: '#111827',
     marginBottom: 16,
   },
   friendItem: {
@@ -331,14 +376,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#3B82F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   friendAvatarText: {
     fontSize: 16,
     fontFamily: 'Inter-Bold',
-    color: 'white',
   },
   friendInfo: {
     flex: 1,
@@ -346,13 +389,11 @@ const styles = StyleSheet.create({
   friendName: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#111827',
     marginBottom: 2,
   },
   friendStatus: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
   },
   statusDot: {
     width: 12,
@@ -362,32 +403,32 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   getStartedButton: {
-    backgroundColor: 'white',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 24,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   getStartedButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#3B82F6',
   },
   manualSignInButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   manualSignInButtonText: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: 'white',
   },
   footer: {
     alignItems: 'center',
@@ -396,7 +437,6 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     lineHeight: 20,
   },

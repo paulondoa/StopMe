@@ -25,18 +25,24 @@ export function DemoAuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const authenticatedUser = authenticateUser(email, password);
-    
-    if (authenticatedUser) {
-      setUser(authenticatedUser);
+    try {
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const authenticatedUser = authenticateUser(email, password);
+      
+      if (authenticatedUser) {
+        setUser(authenticatedUser);
+        setLoading(false);
+        return { error: null };
+      } else {
+        setLoading(false);
+        return { error: { message: 'Invalid email or password' } };
+      }
+    } catch (err) {
+      console.error('Sign in error:', err);
       setLoading(false);
-      return { error: null };
-    } else {
-      setLoading(false);
-      return { error: { message: 'Invalid email or password' } };
+      return { error: { message: 'An error occurred during sign in' } };
     }
   };
 

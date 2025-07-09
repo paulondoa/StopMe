@@ -10,62 +10,78 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Users, Shield } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Welcome() {
   const router = useRouter();
+  const { theme, isDark } = useTheme();
+  const { t } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={['#3B82F6', '#8B5CF6']}
+        colors={isDark ? ['#1F2937', '#374151'] : ['#3B82F6', '#8B5CF6']}
         style={styles.gradient}
       >
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <MapPin color="white" size={48} />
-              <Text style={styles.logo}>SpotMe</Text>
+              <MapPin color={theme.surface} size={48} />
+              <Text style={[styles.logo, { color: theme.surface }]}>SpotMe</Text>
             </View>
             <Text style={styles.tagline}>
-              Stay connected with friends in real-time
+              {t('stayConnected')}
             </Text>
           </View>
 
           <View style={styles.features}>
             <View style={styles.feature}>
-              <MapPin color="white" size={24} />
-              <Text style={styles.featureText}>Real-time Location</Text>
+              <MapPin color={theme.surface} size={24} />
+              <Text style={[styles.featureText, { color: theme.surface }]}>
+                {t('realTimeLocation')}
+              </Text>
             </View>
             <View style={styles.feature}>
-              <Users color="white" size={24} />
-              <Text style={styles.featureText}>Find Friends</Text>
+              <Users color={theme.surface} size={24} />
+              <Text style={[styles.featureText, { color: theme.surface }]}>
+                {t('findFriends')}
+              </Text>
             </View>
             <View style={styles.feature}>
-              <Shield color="white" size={24} />
-              <Text style={styles.featureText}>Privacy Control</Text>
+              <Shield color={theme.surface} size={24} />
+              <Text style={[styles.featureText, { color: theme.surface }]}>
+                {t('privacyControl')}
+              </Text>
             </View>
           </View>
 
           <View style={styles.actions}>
-            <View style={styles.demoInfo}>
-              <Text style={styles.demoTitle}>Demo Account Available</Text>
-              <Text style={styles.demoCredentials}>
-                Email: demo@spotme.app{'\n'}Password: demo123
+            <View style={[styles.demoInfo, { backgroundColor: `${theme.surface}20` }]}>
+              <Text style={[styles.demoTitle, { color: theme.surface }]}>
+                {t('demoAccountAvailable')}
+              </Text>
+              <Text style={[styles.demoCredentials, { color: `${theme.surface}E6` }]}>
+                {t('demoCredentials')}
               </Text>
             </View>
 
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, { backgroundColor: theme.surface }]}
               onPress={() => router.push('/(auth)/signup')}
             >
-              <Text style={styles.primaryButtonText}>Get Started</Text>
+              <Text style={[styles.primaryButtonText, { color: theme.primary }]}>
+                {t('getStarted')}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[styles.secondaryButton, { borderColor: `${theme.surface}4D` }]}
               onPress={() => router.push('/(auth)/signin')}
             >
-              <Text style={styles.secondaryButtonText}>Sign In</Text>
+              <Text style={[styles.secondaryButtonText, { color: theme.surface }]}>
+                {t('signIn')}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -97,15 +113,14 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 32,
     fontFamily: 'Inter-Bold',
-    color: 'white',
     marginTop: 8,
   },
   tagline: {
     fontSize: 18,
     fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: 24,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   features: {
     gap: 24,
@@ -118,23 +133,25 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: 'white',
   },
   actions: {
     gap: 16,
     marginBottom: 40,
   },
   primaryButton: {
-    backgroundColor: 'white',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   primaryButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#3B82F6',
   },
   secondaryButton: {
     paddingVertical: 16,
@@ -142,15 +159,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   secondaryButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: 'white',
   },
   demoInfo: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -158,13 +172,11 @@ const styles = StyleSheet.create({
   demoTitle: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: 'white',
     marginBottom: 8,
   },
   demoCredentials: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.9)',
     lineHeight: 16,
   },
 });
