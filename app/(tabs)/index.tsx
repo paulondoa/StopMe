@@ -17,11 +17,7 @@ import { useDemoLocation } from '@/contexts/DemoLocationContext';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { 
-  Eye, EyeOff, RefreshCw, Navigation, MapPin, Users, Zap, Shield, 
-  Target, Layers, Route, Bell, Settings, Plus, Minus, Compass,
-  AlertTriangle, Clock, Star, Filter
-} from 'lucide-react-native';
+import { Eye, EyeOff, RefreshCw, Navigation, MapPin, Users, Zap, Shield, Target, Layers, Route, Bell, Settings, Plus, Minus, Compass, TriangleAlert as AlertTriangle, Clock, Star, Filter } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
