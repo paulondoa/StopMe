@@ -17,20 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { 
-  ArrowLeft,
-  Send, 
-  Phone,
-  Video,
-  MoreVertical,
-  MapPin,
-  Camera,
-  Mic,
-  Plus,
-  Smile,
-  Check,
-  CheckCheck
-} from 'lucide-react-native';
+import { ArrowLeft, Send, Phone, Video, MoveVertical as MoreVertical, MapPin, Camera, Mic, Plus, Smile, Check, CheckCheck } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');

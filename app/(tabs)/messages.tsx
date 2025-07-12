@@ -16,19 +16,7 @@ import { useRouter } from 'expo-router';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { 
-  MessageCircle, 
-  Send, 
-  Search, 
-  Plus, 
-  MoreVertical,
-  Phone,
-  Video,
-  MapPin,
-  Clock,
-  Check,
-  CheckCheck
-} from 'lucide-react-native';
+import { MessageCircle, Send, Search, Plus, MoveVertical as MoreVertical, Phone, Video, MapPin, Clock, Check, CheckCheck } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
