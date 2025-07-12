@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { MapPin, Users, Settings, Chrome as Home, Compass } from 'lucide-react-native';
+import { MapPin, Users, Settings, Chrome as Home, Compass, MessageCircle } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { View, Text, StyleSheet, Platform } from 'react-native';
@@ -99,6 +99,20 @@ export default function TabLayout() {
               size={size}
               focused={focused}
               label={t('friends')}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          tabBarIcon: ({ size, color, focused }) => (
+            <TabIcon
+              icon={MessageCircle}
+              color={color}
+              size={size}
+              focused={focused}
+              label="Messages"
             />
           ),
         }}

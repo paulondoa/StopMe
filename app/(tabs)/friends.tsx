@@ -15,11 +15,13 @@ import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UserPlus, Check, X, Search, Users, MessageCircle, MapPin, Clock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
 export default function FriendsScreen() {
+  const router = useRouter();
   const { friends } = useDemoAuth();
   const { theme, isDark } = useTheme();
   const { t } = useLanguage();
@@ -175,7 +177,7 @@ export default function FriendsScreen() {
           <View style={styles.friendActions}>
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: `${theme.primary}20` }]}
-              onPress={() => {}}
+              onPress={() => router.push(`/chat/${item.id}` as any)}
             >
               <MessageCircle color={theme.primary} size={18} />
             </TouchableOpacity>

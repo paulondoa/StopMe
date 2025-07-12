@@ -65,6 +65,7 @@ const resources = {
       // Navigation
       map: 'Map',
       friends: 'Friends',
+      messages: 'Messages',
       profile: 'Profile',
       
       // Map
@@ -199,6 +200,7 @@ const resources = {
       // Navigation
       map: 'Carte',
       friends: 'Amis',
+      messages: 'Messages',
       profile: 'Profil',
       
       // Map
@@ -333,6 +335,7 @@ const resources = {
       // Navigation
       map: 'Mapa',
       friends: 'Amigos',
+      messages: 'Mensajes',
       profile: 'Perfil',
       
       // Map
@@ -467,6 +470,7 @@ const resources = {
       // Navigation
       map: 'Karte',
       friends: 'Freunde',
+      messages: 'Nachrichten',
       profile: 'Profil',
       
       // Map
