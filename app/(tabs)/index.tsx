@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,41 @@ import {
   Animated,
   Dimensions,
   ScrollView,
+  Modal,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Circle, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useDemoLocation } from '@/contexts/DemoLocationContext';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Eye, EyeOff, RefreshCw, Navigation, MapPin, Users, Zap, Shield } from 'lucide-react-native';
+import { 
+  Eye, EyeOff, RefreshCw, Navigation, MapPin, Users, Zap, Shield, 
+  Target, Layers, Route, Bell, Settings, Plus, Minus, Compass,
+  AlertTriangle, Clock, Star, Filter
+} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
+
+interface GeofenceZone {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  type: 'safe' | 'alert' | 'custom';
+  active: boolean;
+}
+
+interface POI {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  type: 'restaurant' | 'cafe' | 'park' | 'shop' | 'custom';
+  rating: number;
+  description: string;
+}
 
 export default function MapScreen() {
   const { user, friends } = useDemoAuth();
@@ -34,15 +59,32 @@ export default function MapScreen() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  
+  // Advanced features state
+  const [showGeofences, setShowGeofences] = useState(true);
+  const [showPOIs, setShowPOIs] = useState(true);
+  const [showClusters, setShowClusters] = useState(true);
+  const [selectedFriend, setSelectedFriend] = useState<any>(null);
+  const [routeToFriend, setRouteToFriend] = useState<any>(null);
+  const [geofenceZones, setGeofenceZones] = useState<GeofenceZone[]>([]);
+  const [pois, setPOIs] = useState<POI[]>([]);
+  const [showMapControls, setShowMapControls] = useState(false);
+  const [mapType, setMapType] = useState<'standard' | 'satellite' | 'hybrid'>('standard');
+  const [proximityAlerts, setProximityAlerts] = useState<any[]>([]);
 
   // Animations
   const fadeAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(-50);
   const pulseAnim = new Animated.Value(1);
   const fabScale = new Animated.Value(0);
+  const controlsAnim = new Animated.Value(0);
+
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     initializeLocation();
+    initializeGeofences();
+    initializePOIs();
     
     // Animate in components
     Animated.sequence([
@@ -96,6 +138,7 @@ export default function MapScreen() {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
+      checkProximityAlerts();
     }
   }, [location]);
 
@@ -104,8 +147,8 @@ export default function MapScreen() {
       const granted = await requestPermission();
       if (!granted) {
         Alert.alert(
-          'Location Permission Required',
-          'Please enable location permissions to use SpotMe',
+          'Permission de localisation requise',
+          'Veuillez activer les permissions de localisation pour utiliser SpotMe',
           [{ text: 'OK' }]
         );
         return;
@@ -117,11 +160,167 @@ export default function MapScreen() {
     }
   };
 
+  const initializeGeofences = () => {
+    const demoGeofences: GeofenceZone[] = [
+      {
+        id: 'home',
+        name: 'Domicile',
+        latitude: 37.7849,
+        longitude: -122.4094,
+        radius: 200,
+        type: 'safe',
+        active: true,
+      },
+      {
+        id: 'work',
+        name: 'Bureau',
+        latitude: 37.7849,
+        longitude: -122.4194,
+        radius: 150,
+        type: 'custom',
+        active: true,
+      },
+      {
+        id: 'school',
+        name: 'École',
+        latitude: 37.7749,
+        longitude: -122.4194,
+        radius: 100,
+        type: 'alert',
+        active: true,
+      },
+    ];
+    setGeofenceZones(demoGeofences);
+  };
+
+  const initializePOIs = () => {
+    const demoPOIs: POI[] = [
+      {
+        id: 'cafe1',
+        name: 'Blue Bottle Coffee',
+        latitude: 37.7849,
+        longitude: -122.4124,
+        type: 'cafe',
+        rating: 4.5,
+        description: 'Excellent café artisanal',
+      },
+      {
+        id: 'restaurant1',
+        name: 'Tartine Bakery',
+        latitude: 37.7819,
+        longitude: -122.4164,
+        type: 'restaurant',
+        rating: 4.8,
+        description: 'Boulangerie française authentique',
+      },
+      {
+        id: 'park1',
+        name: 'Dolores Park',
+        latitude: 37.7596,
+        longitude: -122.4269,
+        type: 'park',
+        rating: 4.6,
+        description: 'Parc urbain avec vue panoramique',
+      },
+    ];
+    setPOIs(demoPOIs);
+  };
+
+  const checkProximityAlerts = () => {
+    if (!location) return;
+
+    friends.forEach(friend => {
+      const distance = calculateDistance(
+        location.coords.latitude,
+        location.coords.longitude,
+        friend.latitude,
+        friend.longitude
+      );
+
+      if (distance < 0.5 && friend.status === 'online') { // 500m
+        const existingAlert = proximityAlerts.find(alert => alert.friendId === friend.id);
+        if (!existingAlert) {
+          const newAlert = {
+            id: Date.now().toString(),
+            friendId: friend.id,
+            friendName: friend.name,
+            distance: Math.round(distance * 1000),
+            timestamp: new Date(),
+          };
+          setProximityAlerts(prev => [...prev, newAlert]);
+          
+          // Show notification
+          Alert.alert(
+            '👋 Ami à proximité !',
+            `${friend.name} est à ${Math.round(distance * 1000)}m de vous`,
+            [
+              { text: 'Ignorer', style: 'cancel' },
+              { text: 'Voir sur la carte', onPress: () => focusOnFriend(friend) },
+            ]
+          );
+        }
+      }
+    });
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const focusOnFriend = (friend: any) => {
+    setSelectedFriend(friend);
+    mapRef.current?.animateToRegion({
+      latitude: friend.latitude,
+      longitude: friend.longitude,
+      latitudeDelta: 0.005,
+      longitudeDelta: 0.005,
+    }, 1000);
+  };
+
+  const createRouteToFriend = (friend: any) => {
+    if (!location) return;
+
+    const route = {
+      coordinates: [
+        {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        },
+        {
+          latitude: friend.latitude,
+          longitude: friend.longitude,
+        },
+      ],
+      distance: calculateDistance(
+        location.coords.latitude,
+        location.coords.longitude,
+        friend.latitude,
+        friend.longitude
+      ),
+    };
+
+    setRouteToFriend(route);
+    setSelectedFriend(friend);
+
+    // Focus on route
+    mapRef.current?.fitToCoordinates(route.coordinates, {
+      edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+      animated: true,
+    });
+  };
+
   const toggleVisibility = async () => {
     const newVisibility = !isVisible;
     setIsVisible(newVisibility);
 
-    // Animate button press
     Animated.sequence([
       Animated.timing(fabScale, {
         toValue: 0.9,
@@ -142,32 +341,25 @@ export default function MapScreen() {
     }
   };
 
-  const refreshLocations = () => {
-    // Animate refresh button
-    Animated.sequence([
-      Animated.timing(fabScale, {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fabScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    console.log('Refreshing friend locations...');
+  const toggleMapControls = () => {
+    const newValue = !showMapControls;
+    setShowMapControls(newValue);
+    
+    Animated.timing(controlsAnim, {
+      toValue: newValue ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
   };
 
   const centerOnCurrentLocation = () => {
     if (location) {
-      setMapRegion({
+      mapRef.current?.animateToRegion({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      });
+      }, 1000);
     }
   };
 
@@ -181,6 +373,34 @@ export default function MapScreen() {
         return theme.secondary;
       default:
         return theme.primary;
+    }
+  };
+
+  const getGeofenceColor = (type: string) => {
+    switch (type) {
+      case 'safe':
+        return theme.success;
+      case 'alert':
+        return theme.error;
+      case 'custom':
+        return theme.primary;
+      default:
+        return theme.secondary;
+    }
+  };
+
+  const getPOIIcon = (type: string) => {
+    switch (type) {
+      case 'restaurant':
+        return '🍽️';
+      case 'cafe':
+        return '☕';
+      case 'park':
+        return '🌳';
+      case 'shop':
+        return '🛍️';
+      default:
+        return '📍';
     }
   };
 
@@ -211,13 +431,13 @@ export default function MapScreen() {
 
       <View style={styles.statItem}>
         <View style={[styles.statIcon, { backgroundColor: `${theme.primary}20` }]}>
-          <MapPin color={theme.primary} size={16} />
+          <Target color={theme.primary} size={16} />
         </View>
         <Text style={[styles.statNumber, { color: theme.text }]}>
-          {location ? '1.2km' : '---'}
+          {geofenceZones.filter(z => z.active).length}
         </Text>
         <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-          Rayon
+          Zones
         </Text>
       </View>
 
@@ -225,14 +445,92 @@ export default function MapScreen() {
 
       <View style={styles.statItem}>
         <View style={[styles.statIcon, { backgroundColor: `${theme.accent}20` }]}>
-          <Zap color={theme.accent} size={16} />
+          <Bell color={theme.accent} size={16} />
         </View>
         <Text style={[styles.statNumber, { color: theme.text }]}>
-          {isTracking ? 'Actif' : 'Inactif'}
+          {proximityAlerts.length}
         </Text>
         <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-          Suivi
+          Alertes
         </Text>
+      </View>
+    </Animated.View>
+  );
+
+  const MapControls = () => (
+    <Animated.View
+      style={[
+        styles.mapControls,
+        {
+          backgroundColor: `${theme.surface}F5`,
+          opacity: controlsAnim,
+          transform: [
+            {
+              translateX: controlsAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-200, 0],
+              }),
+            },
+          ],
+        }
+      ]}
+    >
+      <Text style={[styles.controlsTitle, { color: theme.text }]}>
+        Contrôles de la carte
+      </Text>
+      
+      <View style={styles.controlGroup}>
+        <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
+          Affichage
+        </Text>
+        
+        <TouchableOpacity
+          style={[styles.controlItem, { backgroundColor: showGeofences ? theme.primary : theme.surface }]}
+          onPress={() => setShowGeofences(!showGeofences)}
+        >
+          <Target color={showGeofences ? theme.surface : theme.text} size={20} />
+          <Text style={[styles.controlText, { color: showGeofences ? theme.surface : theme.text }]}>
+            Géofences
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.controlItem, { backgroundColor: showPOIs ? theme.primary : theme.surface }]}
+          onPress={() => setShowPOIs(!showPOIs)}
+        >
+          <Star color={showPOIs ? theme.surface : theme.text} size={20} />
+          <Text style={[styles.controlText, { color: showPOIs ? theme.surface : theme.text }]}>
+            Points d'intérêt
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.controlItem, { backgroundColor: showClusters ? theme.primary : theme.surface }]}
+          onPress={() => setShowClusters(!showClusters)}
+        >
+          <Layers color={showClusters ? theme.surface : theme.text} size={20} />
+          <Text style={[styles.controlText, { color: showClusters ? theme.surface : theme.text }]}>
+            Clusters
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.controlGroup}>
+        <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
+          Type de carte
+        </Text>
+        
+        {['standard', 'satellite', 'hybrid'].map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[styles.controlItem, { backgroundColor: mapType === type ? theme.primary : theme.surface }]}
+            onPress={() => setMapType(type as any)}
+          >
+            <Text style={[styles.controlText, { color: mapType === type ? theme.surface : theme.text }]}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </Animated.View>
   );
@@ -296,26 +594,19 @@ export default function MapScreen() {
           <View style={styles.headerContent}>
             <View>
               <Text style={[styles.greeting, { color: theme.text }]}>
-                Bonjour, {user?.name?.split(' ')[0] || 'Utilisateur'} 👋
+                Explorer 🗺️
               </Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                Découvrez vos amis à proximité
+                Carte avancée avec géofencing
               </Text>
             </View>
             
-            <Animated.View 
-              style={[
-                styles.profileButton,
-                { 
-                  backgroundColor: theme.primary,
-                  transform: [{ scale: pulseAnim }],
-                }
-              ]}
+            <TouchableOpacity
+              style={[styles.settingsButton, { backgroundColor: theme.surface }]}
+              onPress={toggleMapControls}
             >
-              <Text style={[styles.profileInitial, { color: theme.surface }]}>
-                {user?.name?.charAt(0) || 'U'}
-              </Text>
-            </Animated.View>
+              <Settings color={theme.text} size={20} />
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </LinearGradient>
@@ -326,6 +617,7 @@ export default function MapScreen() {
       {/* Map Container */}
       <View style={styles.mapContainer}>
         <MapView
+          ref={mapRef}
           style={styles.map}
           region={mapRegion}
           onRegionChangeComplete={setMapRegion}
@@ -333,6 +625,7 @@ export default function MapScreen() {
           showsUserLocation={true}
           showsMyLocationButton={false}
           followsUserLocation={false}
+          mapType={mapType}
           customMapStyle={isDark ? darkMapStyle : []}
         >
           {/* Current user location */}
@@ -358,8 +651,47 @@ export default function MapScreen() {
               title={friend.name}
               description={`Vu: ${new Date(friend.last_seen).toLocaleTimeString()}`}
               pinColor={getMarkerColor(friend.status)}
+              onPress={() => setSelectedFriend(friend)}
             />
           ))}
+
+          {/* Geofence zones */}
+          {showGeofences && geofenceZones.map((zone) => (
+            <Circle
+              key={zone.id}
+              center={{
+                latitude: zone.latitude,
+                longitude: zone.longitude,
+              }}
+              radius={zone.radius}
+              fillColor={`${getGeofenceColor(zone.type)}20`}
+              strokeColor={getGeofenceColor(zone.type)}
+              strokeWidth={2}
+            />
+          ))}
+
+          {/* Points of Interest */}
+          {showPOIs && pois.map((poi) => (
+            <Marker
+              key={poi.id}
+              coordinate={{
+                latitude: poi.latitude,
+                longitude: poi.longitude,
+              }}
+              title={`${getPOIIcon(poi.type)} ${poi.name}`}
+              description={`⭐ ${poi.rating} - ${poi.description}`}
+            />
+          ))}
+
+          {/* Route to friend */}
+          {routeToFriend && (
+            <Polyline
+              coordinates={routeToFriend.coordinates}
+              strokeColor={theme.primary}
+              strokeWidth={4}
+              lineDashPattern={[5, 5]}
+            />
+          )}
         </MapView>
 
         {/* Map Overlay */}
@@ -369,6 +701,9 @@ export default function MapScreen() {
           pointerEvents="none"
         />
       </View>
+
+      {/* Map Controls */}
+      {showMapControls && <MapControls />}
 
       {/* Floating Action Buttons */}
       <View style={styles.fabContainer}>
@@ -380,19 +715,96 @@ export default function MapScreen() {
         />
 
         <FloatingActionButton
-          icon={<RefreshCw color="white" size={24} />}
-          onPress={refreshLocations}
-          backgroundColor={theme.accent}
+          icon={<Compass color="white" size={24} />}
+          onPress={centerOnCurrentLocation}
+          backgroundColor={theme.primary}
           delay={100}
         />
 
         <FloatingActionButton
-          icon={<Navigation color="white" size={24} />}
-          onPress={centerOnCurrentLocation}
-          backgroundColor={theme.primary}
+          icon={<Filter color="white" size={24} />}
+          onPress={toggleMapControls}
+          backgroundColor={theme.accent}
           delay={200}
         />
       </View>
+
+      {/* Friend Details Modal */}
+      {selectedFriend && (
+        <Modal
+          visible={!!selectedFriend}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setSelectedFriend(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.friendModal, { backgroundColor: theme.surface }]}>
+              <LinearGradient
+                colors={[theme.primary, theme.secondary]}
+                style={styles.modalGradient}
+              >
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalAvatar}>
+                    <Text style={[styles.modalAvatarText, { color: theme.surface }]}>
+                      {selectedFriend.name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.modalInfo}>
+                    <Text style={[styles.modalName, { color: theme.surface }]}>
+                      {selectedFriend.name}
+                    </Text>
+                    <Text style={[styles.modalStatus, { color: `${theme.surface}CC` }]}>
+                      {selectedFriend.status === 'online' ? 'En ligne' : 
+                       selectedFriend.status === 'ghost' ? 'Mode fantôme' : 'Hors ligne'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setSelectedFriend(null)}
+                  >
+                    <Text style={[styles.closeButtonText, { color: theme.surface }]}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+
+              <View style={styles.modalContent}>
+                <TouchableOpacity
+                  style={[styles.modalAction, { backgroundColor: `${theme.primary}20` }]}
+                  onPress={() => createRouteToFriend(selectedFriend)}
+                >
+                  <Route color={theme.primary} size={24} />
+                  <Text style={[styles.modalActionText, { color: theme.primary }]}>
+                    Créer un itinéraire
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalAction, { backgroundColor: `${theme.success}20` }]}
+                  onPress={() => focusOnFriend(selectedFriend)}
+                >
+                  <Target color={theme.success} size={24} />
+                  <Text style={[styles.modalActionText, { color: theme.success }]}>
+                    Centrer sur la carte
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalAction, { backgroundColor: `${theme.accent}20` }]}
+                  onPress={() => {
+                    Alert.alert('Message', `Envoyer un message à ${selectedFriend.name}`);
+                    setSelectedFriend(null);
+                  }}
+                >
+                  <Bell color={theme.accent} size={24} />
+                  <Text style={[styles.modalActionText, { color: theme.accent }]}>
+                    Envoyer un message
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Status Bar */}
       <Animated.View 
@@ -424,9 +836,9 @@ export default function MapScreen() {
           <View style={styles.statusDivider} />
           
           <View style={styles.statusItem}>
-            <Shield color={theme.primary} size={16} />
+            <MapPin color={theme.primary} size={16} />
             <Text style={[styles.statusText, { color: theme.text }]}>
-              {friends.length} {friends.length === 1 ? 'ami' : 'amis'} à proximité
+              {friends.length} {friends.length === 1 ? 'ami' : 'amis'} • {geofenceZones.length} zones
             </Text>
           </View>
         </View>
@@ -481,7 +893,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
   },
-  profileButton: {
+  settingsButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -492,10 +904,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-  },
-  profileInitial: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
   },
   quickStats: {
     flexDirection: 'row',
@@ -550,6 +958,47 @@ const styles = StyleSheet.create({
     right: 0,
     height: 100,
   },
+  mapControls: {
+    position: 'absolute',
+    left: 24,
+    top: 140,
+    bottom: 140,
+    width: 200,
+    borderRadius: 16,
+    padding: 16,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    zIndex: 15,
+  },
+  controlsTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 16,
+  },
+  controlGroup: {
+    marginBottom: 20,
+  },
+  controlLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  controlItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  controlText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+  },
   fabContainer: {
     position: 'absolute',
     right: 24,
@@ -573,6 +1022,80 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  friendModal: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  modalGradient: {
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  modalAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalAvatarText: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+  },
+  modalInfo: {
+    flex: 1,
+  },
+  modalName: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 4,
+  },
+  modalStatus: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+  },
+  modalContent: {
+    padding: 24,
+    gap: 16,
+  },
+  modalAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 16,
+  },
+  modalActionText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   statusBar: {
     position: 'absolute',
