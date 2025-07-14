@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Marker } from 'react-native-maps';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -31,6 +31,7 @@ interface MapClustersProps {
   onFriendPress?: (friend: Friend) => void;
   clusterRadius?: number;
   minClusterSize?: number;
+  maxZoom?: number;
 }
 
 export default function MapClusters({
@@ -40,14 +41,30 @@ export default function MapClusters({
   onFriendPress,
   clusterRadius = 0.01, // Degrees
   minClusterSize = 2,
+  maxZoom = 0.01,
 }: MapClustersProps) {
   const { theme } = useTheme();
 
+  // Memoized clustering algorithm for performance
   const clusters = useMemo(() => {
     if (friends.length === 0) return [];
 
+    // Don't cluster if zoomed in too much
+    if (region.latitudeDelta < maxZoom) {
+      return friends.map(friend => ({
+        id: friend.id,
+        latitude: friend.latitude,
+        longitude: friend.longitude,
+        friends: [friend],
+        count: 1,
+      }));
+    }
+
     const clustered: ClusterData[] = [];
     const processed = new Set<string>();
+
+    // Adjust cluster radius based on zoom level
+    const adjustedRadius = clusterRadius * (region.latitudeDelta / 0.1);
 
     friends.forEach(friend => {
       if (processed.has(friend.id)) return;
@@ -62,7 +79,7 @@ export default function MapClusters({
           Math.pow(friend.longitude - otherFriend.longitude, 2)
         );
 
-        return distance <= clusterRadius;
+        return distance <= adjustedRadius;
       });
 
       if (nearbyFriends.length >= minClusterSize - 1) {
@@ -95,9 +112,9 @@ export default function MapClusters({
     });
 
     return clustered;
-  }, [friends, clusterRadius, minClusterSize]);
+  }, [friends, region, clusterRadius, minClusterSize, maxZoom]);
 
-  const getClusterColor = (cluster: ClusterData) => {
+  const getClusterColor = useCallback((cluster: ClusterData) => {
     if (cluster.count === 1) {
       const friend = cluster.friends[0];
       switch (friend.status) {
@@ -112,27 +129,54 @@ export default function MapClusters({
       }
     }
 
-    // Multi-friend cluster
-    const onlineCount = cluster.friends.filter(f => f.status === 'online').length;
-    if (onlineCount === cluster.count) {
-      return theme.success;
-    } else if (onlineCount > 0) {
-      return theme.warning;
-    } else {
-      return theme.textSecondary;
-    }
-  };
+    // Multi-friend cluster - determine dominant status
+    const statusCounts = cluster.friends.reduce((acc, friend) => {
+      acc[friend.status] = (acc[friend.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
-  const getClusterSize = (count: number) => {
+    const dominantStatus = Object.entries(statusCounts)
+      .sort(([,a], [,b]) => b - a)[0][0];
+
+    switch (dominantStatus) {
+      case 'online':
+        return theme.success;
+      case 'ghost':
+        return theme.secondary;
+      case 'offline':
+        return theme.textSecondary;
+      default:
+        return theme.primary;
+    }
+  }, [theme]);
+
+  const getClusterSize = useCallback((count: number) => {
     if (count === 1) return 40;
     if (count <= 5) return 50;
     if (count <= 10) return 60;
-    return 70;
-  };
+    if (count <= 20) return 70;
+    return 80;
+  }, []);
 
-  const ClusterMarker = ({ cluster }: { cluster: ClusterData }) => {
+  const getClusterTextSize = useCallback((count: number) => {
+    if (count === 1) return 14;
+    if (count <= 5) return 16;
+    if (count <= 10) return 18;
+    return 20;
+  }, []);
+
+  const ClusterMarker = React.memo(({ cluster }: { cluster: ClusterData }) => {
     const size = getClusterSize(cluster.count);
+    const textSize = getClusterTextSize(cluster.count);
     const color = getClusterColor(cluster);
+
+    const handlePress = useCallback(() => {
+      if (cluster.count === 1) {
+        onFriendPress?.(cluster.friends[0]);
+      } else {
+        onClusterPress?.(cluster);
+      }
+    }, [cluster]);
 
     if (cluster.count === 1) {
       const friend = cluster.friends[0];
@@ -142,7 +186,8 @@ export default function MapClusters({
             latitude: cluster.latitude,
             longitude: cluster.longitude,
           }}
-          onPress={() => onFriendPress?.(friend)}
+          onPress={handlePress}
+          tracksViewChanges={false} // Optimize performance
         >
           <View style={[
             styles.singleMarker,
@@ -151,9 +196,16 @@ export default function MapClusters({
               width: size,
               height: size,
               borderRadius: size / 2,
+              borderColor: theme.surface,
             }
           ]}>
-            <Text style={[styles.singleMarkerText, { color: theme.surface }]}>
+            <Text style={[
+              styles.singleMarkerText, 
+              { 
+                color: theme.surface,
+                fontSize: textSize,
+              }
+            ]}>
               {friend.name.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -167,7 +219,8 @@ export default function MapClusters({
           latitude: cluster.latitude,
           longitude: cluster.longitude,
         }}
-        onPress={() => onClusterPress?.(cluster)}
+        onPress={handlePress}
+        tracksViewChanges={false} // Optimize performance
       >
         <View style={[
           styles.clusterMarker,
@@ -179,13 +232,35 @@ export default function MapClusters({
             borderColor: theme.surface,
           }
         ]}>
-          <Text style={[styles.clusterText, { color: theme.surface }]}>
+          <Text style={[
+            styles.clusterText, 
+            { 
+              color: theme.surface,
+              fontSize: textSize,
+            }
+          ]}>
             {cluster.count}
           </Text>
+          
+          {/* Status indicators for cluster */}
+          <View style={styles.statusIndicators}>
+            {cluster.friends.slice(0, 3).map((friend, index) => (
+              <View
+                key={friend.id}
+                style={[
+                  styles.statusDot,
+                  {
+                    backgroundColor: getClusterColor({ ...cluster, friends: [friend], count: 1 }),
+                    left: index * 4,
+                  }
+                ]}
+              />
+            ))}
+          </View>
         </View>
       </Marker>
     );
-  };
+  });
 
   return (
     <>
@@ -205,9 +280,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+    borderWidth: 3,
   },
   singleMarkerText: {
-    fontSize: 16,
     fontFamily: 'Inter-Bold',
   },
   clusterMarker: {
@@ -219,9 +294,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
+    position: 'relative',
   },
   clusterText: {
-    fontSize: 16,
     fontFamily: 'Inter-Bold',
+  },
+  statusIndicators: {
+    position: 'absolute',
+    bottom: -2,
+    left: '50%',
+    marginLeft: -6,
+    flexDirection: 'row',
+  },
+  statusDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    position: 'absolute',
   },
 });

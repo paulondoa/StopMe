@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,27 @@ import {
   Animated,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ArrowLeft, Send, Phone, Video, MoveVertical as MoreVertical, MapPin, Camera, Mic, Plus, Smile, Check, CheckCheck } from 'lucide-react-native';
+import { 
+  ArrowLeft, 
+  Send, 
+  Phone, 
+  Video, 
+  MapPin, 
+  Camera, 
+  Mic, 
+  Plus, 
+  Smile, 
+  Check, 
+  CheckCheck,
+  MoreHorizontal,
+  Info
+} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
@@ -39,21 +54,67 @@ export default function ChatScreen() {
   const { theme, isDark } = useTheme();
   const { t } = useLanguage();
   
+  // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [friend, setFriend] = useState<any>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+
+  // Refs
   const flatListRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Animations
-  const fadeAnim = new Animated.Value(0);
-  const slideAnim = new Animated.Value(30);
-  const inputAnim = new Animated.Value(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const inputAnim = useRef(new Animated.Value(0)).current;
+  const sendButtonScale = useRef(new Animated.Value(0.8)).current;
+
+  // Memoized friend data
+  const friendData = useMemo(() => 
+    friends.find(f => f.id === friendId), 
+    [friends, friendId]
+  );
 
   useEffect(() => {
-    initializeChat();
+    if (friendData) {
+      setFriend(friendData);
+      initializeChat();
+    }
+  }, [friendData]);
+
+  useEffect(() => {
+    // Animate input when text changes
+    Animated.spring(inputAnim, {
+      toValue: inputText.length > 0 ? 1 : 0,
+      useNativeDriver: true,
+    }).start();
+
+    // Animate send button
+    Animated.spring(sendButtonScale, {
+      toValue: inputText.trim().length > 0 ? 1 : 0.8,
+      useNativeDriver: true,
+    }).start();
+  }, [inputText]);
+
+  const initializeChat = useCallback(async () => {
+    setLoading(true);
     
-    // Animate in
+    // Simulate loading delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    if (friendData) {
+      generateDemoMessages(friendData);
+      startAnimations();
+    }
+    
+    setLoading(false);
+  }, [friendData]);
+
+  const startAnimations = useCallback(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -66,26 +127,9 @@ export default function ChatScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [friendId]);
+  }, []);
 
-  useEffect(() => {
-    // Animate input when text changes
-    Animated.spring(inputAnim, {
-      toValue: inputText.length > 0 ? 1 : 0,
-      useNativeDriver: true,
-    }).start();
-  }, [inputText]);
-
-  const initializeChat = () => {
-    // Find friend
-    const currentFriend = friends.find(f => f.id === friendId);
-    if (currentFriend) {
-      setFriend(currentFriend);
-      generateDemoMessages(currentFriend);
-    }
-  };
-
-  const generateDemoMessages = (friend: any) => {
+  const generateDemoMessages = useCallback((friend: any) => {
     const demoMessages: Message[] = [
       {
         id: '1',
@@ -135,14 +179,18 @@ export default function ChatScreen() {
     ];
 
     setMessages(demoMessages);
-  };
+  }, [user]);
 
-  const sendMessage = () => {
-    if (!inputText.trim() || !user || !friend) return;
+  const sendMessage = useCallback(async () => {
+    if (!inputText.trim() || !user || !friend || sending) return;
+
+    const messageText = inputText.trim();
+    setInputText('');
+    setSending(true);
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      text: inputText.trim(),
+      text: messageText,
       timestamp: new Date(),
       senderId: user.id,
       senderName: user.name,
@@ -151,10 +199,17 @@ export default function ChatScreen() {
     };
 
     setMessages(prev => [...prev, newMessage]);
-    setInputText('');
 
-    // Simulate message delivery
+    // Scroll to bottom
     setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    try {
+      // Simulate message sending
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update message status to delivered
       setMessages(prev => 
         prev.map(msg => 
           msg.id === newMessage.id 
@@ -162,66 +217,90 @@ export default function ChatScreen() {
             : msg
         )
       );
-    }, 1000);
 
-    // Simulate friend typing and response
-    setTimeout(() => {
-      setIsTyping(true);
+      // Simulate friend typing and response
       setTimeout(() => {
-        setIsTyping(false);
-        const responses = [
-          'C\'est parfait ! 👍',
-          'Super idée ! 😄',
-          'J\'ai hâte ! ⭐',
-          'Génial ! À tout à l\'heure 🚀',
-        ];
-        
-        const response: Message = {
-          id: (Date.now() + 1).toString(),
-          text: responses[Math.floor(Math.random() * responses.length)],
-          timestamp: new Date(),
-          senderId: friend.id,
-          senderName: friend.name,
-          type: 'text',
-          status: 'sent',
-        };
-        
-        setMessages(prev => [...prev, response]);
-      }, 2000);
-    }, 1500);
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          const responses = [
+            'C\'est parfait ! 👍',
+            'Super idée ! 😄',
+            'J\'ai hâte ! ⭐',
+            'Génial ! À tout à l\'heure 🚀',
+            'Parfait, on se retrouve là-bas !',
+            'Merci pour l\'info ! 🙏',
+          ];
+          
+          const response: Message = {
+            id: (Date.now() + 1).toString(),
+            text: responses[Math.floor(Math.random() * responses.length)],
+            timestamp: new Date(),
+            senderId: friend.id,
+            senderName: friend.name,
+            type: 'text',
+            status: 'sent',
+          };
+          
+          setMessages(prev => [...prev, response]);
+          
+          // Scroll to bottom after response
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }, 2000);
+      }, 1500);
 
-    // Scroll to bottom
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return theme.success;
-      case 'offline':
-        return theme.textSecondary;
-      case 'ghost':
-        return theme.secondary;
-      default:
-        return theme.primary;
+    } catch (error) {
+      // Handle error
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === newMessage.id 
+            ? { ...msg, status: 'sent' }
+            : msg
+        )
+      );
+    } finally {
+      setSending(false);
     }
-  };
+  }, [inputText, user, friend, sending]);
 
-  const formatTime = (date: Date) => {
+  const handleInputChange = useCallback((text: string) => {
+    setInputText(text);
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set new timeout
+    typingTimeoutRef.current = setTimeout(() => {
+      // Stop typing indicator
+    }, 1000);
+  }, []);
+
+  const getStatusColor = useCallback((status: string) => {
+    switch (status) {
+      case 'online': return theme.success;
+      case 'offline': return theme.textSecondary;
+      case 'ghost': return theme.secondary;
+      default: return theme.primary;
+    }
+  }, [theme]);
+
+  const formatTime = useCallback((date: Date) => {
     return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  };
+  }, []);
 
-  const MessageBubble = ({ item, index }: { item: Message; index: number }) => {
+  const MessageBubble = React.memo(({ item, index }: { item: Message; index: number }) => {
     const isOwnMessage = item.senderId === user?.id;
-    const bubbleAnim = new Animated.Value(0);
+    const bubbleAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
       Animated.timing(bubbleAnim, {
         toValue: 1,
         duration: 300,
-        delay: index * 50,
+        delay: Math.min(index * 50, 500),
         useNativeDriver: true,
       }).start();
     }, []);
@@ -274,7 +353,7 @@ export default function ChatScreen() {
             {isOwnMessage && (
               <View style={styles.messageStatus}>
                 {item.status === 'sending' && (
-                  <View style={[styles.statusDot, { backgroundColor: `${theme.surface}60` }]} />
+                  <ActivityIndicator size="small" color={`${theme.surface}CC`} />
                 )}
                 {item.status === 'sent' && (
                   <Check color={`${theme.surface}CC`} size={14} />
@@ -291,25 +370,106 @@ export default function ChatScreen() {
         </View>
       </Animated.View>
     );
-  };
+  });
 
-  const TypingIndicator = () => (
-    <Animated.View style={[styles.typingContainer, { opacity: fadeAnim }]}>
-      <View style={[styles.typingBubble, { backgroundColor: theme.surface }]}>
-        <View style={styles.typingDots}>
-          <Animated.View style={[styles.typingDot, { backgroundColor: theme.textSecondary }]} />
-          <Animated.View style={[styles.typingDot, { backgroundColor: theme.textSecondary }]} />
-          <Animated.View style={[styles.typingDot, { backgroundColor: theme.textSecondary }]} />
+  const TypingIndicator = React.memo(() => {
+    const typingAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+      if (isTyping) {
+        const animation = Animated.loop(
+          Animated.sequence([
+            Animated.timing(typingAnim, {
+              toValue: 1,
+              duration: 600,
+              useNativeDriver: true,
+            }),
+            Animated.timing(typingAnim, {
+              toValue: 0,
+              duration: 600,
+              useNativeDriver: true,
+            }),
+          ])
+        );
+        animation.start();
+        return () => animation.stop();
+      }
+    }, [isTyping]);
+
+    if (!isTyping) return null;
+
+    return (
+      <Animated.View 
+        style={[
+          styles.typingContainer,
+          { opacity: fadeAnim }
+        ]}
+      >
+        <View style={[styles.typingBubble, { backgroundColor: theme.surface }]}>
+          <View style={styles.typingDots}>
+            <Animated.View 
+              style={[
+                styles.typingDot, 
+                { 
+                  backgroundColor: theme.textSecondary,
+                  opacity: typingAnim,
+                }
+              ]} 
+            />
+            <Animated.View 
+              style={[
+                styles.typingDot, 
+                { 
+                  backgroundColor: theme.textSecondary,
+                  opacity: typingAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                }
+              ]} 
+            />
+            <Animated.View 
+              style={[
+                styles.typingDot, 
+                { 
+                  backgroundColor: theme.textSecondary,
+                  opacity: typingAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.6, 1],
+                  }),
+                }
+              ]} 
+            />
+          </View>
         </View>
-      </View>
-    </Animated.View>
-  );
+      </Animated.View>
+    );
+  });
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.text }]}>
+            Chargement de la conversation...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!friend) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={styles.centered}>
-          <Text style={{ color: theme.text }}>Ami introuvable</Text>
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: theme.text }]}>Ami introuvable</Text>
+          <TouchableOpacity 
+            style={[styles.backButton, { backgroundColor: theme.primary }]}
+            onPress={() => router.back()}
+          >
+            <Text style={[styles.backButtonText, { color: theme.surface }]}>Retour</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -333,13 +493,13 @@ export default function ChatScreen() {
         >
           <View style={styles.headerContent}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={styles.headerBackButton}
               onPress={() => router.back()}
             >
               <ArrowLeft color={theme.text} size={24} />
             </TouchableOpacity>
             
-            <View style={styles.friendInfo}>
+            <TouchableOpacity style={styles.friendInfo} onPress={() => {}}>
               <View style={styles.friendAvatar}>
                 <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
                   <Text style={[styles.avatarText, { color: theme.surface }]}>
@@ -359,11 +519,12 @@ export default function ChatScreen() {
                   {friend.name}
                 </Text>
                 <Text style={[styles.friendStatus, { color: theme.textSecondary }]}>
-                  {friend.status === 'online' ? 'En ligne' : 
+                  {isTyping ? 'En train d\'écrire...' :
+                   friend.status === 'online' ? 'En ligne' : 
                    friend.status === 'ghost' ? 'Mode fantôme' : 'Hors ligne'}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
             
             <View style={styles.headerActions}>
               <TouchableOpacity 
@@ -378,6 +539,13 @@ export default function ChatScreen() {
                 onPress={() => Alert.alert('Vidéo', 'Fonctionnalité vidéo à venir')}
               >
                 <Video color={theme.primary} size={20} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: `${theme.textSecondary}20` }]}
+                onPress={() => {}}
+              >
+                <MoreHorizontal color={theme.textSecondary} size={20} />
               </TouchableOpacity>
             </View>
           </View>
@@ -394,9 +562,13 @@ export default function ChatScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.messagesList}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={20}
+          windowSize={10}
+          initialNumToRender={15}
         />
         
-        {isTyping && <TypingIndicator />}
+        <TypingIndicator />
       </View>
 
       {/* Input */}
@@ -414,13 +586,17 @@ export default function ChatScreen() {
             </TouchableOpacity>
             
             <TextInput
+              ref={inputRef}
               style={[styles.textInput, { color: theme.text }]}
               placeholder="Tapez votre message..."
               placeholderTextColor={theme.textSecondary}
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={handleInputChange}
               multiline
               maxLength={1000}
+              returnKeyType="send"
+              onSubmitEditing={sendMessage}
+              blurOnSubmit={false}
             />
             
             <TouchableOpacity style={styles.inputAction}>
@@ -431,14 +607,7 @@ export default function ChatScreen() {
               style={[
                 styles.sendButtonContainer,
                 {
-                  transform: [
-                    {
-                      scale: inputAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.8, 1],
-                      }),
-                    },
-                  ],
+                  transform: [{ scale: sendButtonScale }],
                 }
               ]}
             >
@@ -450,9 +619,13 @@ export default function ChatScreen() {
                   }
                 ]}
                 onPress={sendMessage}
-                disabled={!inputText.trim()}
+                disabled={!inputText.trim() || sending}
               >
-                <Send color={theme.surface} size={20} />
+                {sending ? (
+                  <ActivityIndicator size="small" color={theme.surface} />
+                ) : (
+                  <Send color={theme.surface} size={20} />
+                )}
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -466,10 +639,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  centered: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 24,
+  },
+  errorText: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+  },
+  backButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   headerGradient: {
     paddingTop: 8,
@@ -483,7 +680,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  backButton: {
+  headerBackButton: {
     padding: 8,
   },
   friendInfo: {
@@ -591,11 +788,6 @@ const styles = StyleSheet.create({
   },
   messageStatus: {
     marginLeft: 4,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
   },
   typingContainer: {
     paddingHorizontal: 20,

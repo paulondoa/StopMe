@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,16 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   Animated,
   Dimensions,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MessageCircle, Send, Search, Plus, MoveVertical as MoreVertical, Phone, Video, MapPin, Clock, Check, CheckCheck } from 'lucide-react-native';
+import { MessageCircle, Search, Plus, Clock, Check, CheckCheck, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
@@ -40,6 +40,7 @@ interface Conversation {
   unreadCount: number;
   isOnline: boolean;
   status: 'online' | 'offline' | 'ghost';
+  isTyping?: boolean;
 }
 
 export default function MessagesScreen() {
@@ -48,18 +49,70 @@ export default function MessagesScreen() {
   const { theme, isDark } = useTheme();
   const { t } = useLanguage();
   
+  // State
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Refs
+  const searchInputRef = useRef<TextInput>(null);
+  const listRef = useRef<FlatList>(null);
 
   // Animations
-  const fadeAnim = new Animated.Value(0);
-  const slideAnim = new Animated.Value(30);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const searchAnim = useRef(new Animated.Value(0)).current;
+
+  // Memoized filtered conversations
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    
+    return conversations.filter(conv =>
+      conv.friendName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [conversations, searchQuery]);
+
+  // Memoized stats
+  const stats = useMemo(() => ({
+    total: conversations.length,
+    unread: conversations.reduce((sum, conv) => sum + conv.unreadCount, 0),
+    online: conversations.filter(conv => conv.isOnline).length,
+  }), [conversations]);
 
   useEffect(() => {
     initializeConversations();
+    startAnimations();
+  }, [friends]);
+
+  const initializeConversations = useCallback(async () => {
+    setLoading(true);
     
-    // Animate in
+    // Simulate loading delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Create demo conversations from friends
+    const demoConversations: Conversation[] = friends.map((friend, index) => ({
+      id: `conv-${friend.id}`,
+      friendId: friend.id,
+      friendName: friend.name,
+      lastMessage: getDemoMessage(index),
+      lastMessageTime: new Date(Date.now() - Math.random() * 86400000), // Random time in last 24h
+      unreadCount: Math.floor(Math.random() * 5),
+      isOnline: friend.status === 'online',
+      status: friend.status,
+      isTyping: Math.random() > 0.8 && friend.status === 'online', // 20% chance of typing
+    }));
+
+    // Sort by last message time
+    demoConversations.sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
+    setConversations(demoConversations);
+    setLoading(false);
+  }, [friends]);
+
+  const startAnimations = useCallback(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -72,27 +125,9 @@ export default function MessagesScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [friends]);
+  }, []);
 
-  const initializeConversations = () => {
-    // Create demo conversations from friends
-    const demoConversations: Conversation[] = friends.map((friend, index) => ({
-      id: `conv-${friend.id}`,
-      friendId: friend.id,
-      friendName: friend.name,
-      lastMessage: getDemoMessage(index),
-      lastMessageTime: new Date(Date.now() - Math.random() * 86400000), // Random time in last 24h
-      unreadCount: Math.floor(Math.random() * 5),
-      isOnline: friend.status === 'online',
-      status: friend.status,
-    }));
-
-    // Sort by last message time
-    demoConversations.sort((a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime());
-    setConversations(demoConversations);
-  };
-
-  const getDemoMessage = (index: number) => {
+  const getDemoMessage = useCallback((index: number) => {
     const messages = [
       "Salut ! Tu es où en ce moment ? 📍",
       "On se retrouve au café habituel ? ☕",
@@ -100,51 +135,102 @@ export default function MessagesScreen() {
       "Super soirée hier ! Merci 🎉",
       "Tu as vu le nouveau restaurant ? 🍕",
       "Rendez-vous à 18h ? ⏰",
+      "Comment ça va aujourd'hui ?",
+      "Tu veux qu'on se voie ce weekend ?",
+      "J'ai une surprise pour toi ! 🎁",
+      "Merci pour ton aide hier 🙏",
     ];
     return messages[index % messages.length];
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return theme.success;
-      case 'offline':
-        return theme.textSecondary;
-      case 'ghost':
-        return theme.secondary;
-      default:
-        return theme.primary;
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
+  const toggleSearch = useCallback(() => {
+    const newSearching = !isSearching;
+    setIsSearching(newSearching);
+    
+    Animated.timing(searchAnim, {
+      toValue: newSearching ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+
+    if (newSearching) {
+      setTimeout(() => searchInputRef.current?.focus(), 300);
+    } else {
+      setSearchQuery('');
+      searchInputRef.current?.blur();
     }
-  };
+  }, [isSearching]);
 
-  const formatTime = (date: Date) => {
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await initializeConversations();
+    setRefreshing(false);
+  }, [initializeConversations]);
+
+  const markAsRead = useCallback((conversationId: string) => {
+    setConversations(prev => 
+      prev.map(conv => 
+        conv.id === conversationId 
+          ? { ...conv, unreadCount: 0 }
+          : conv
+      )
+    );
+  }, []);
+
+  const deleteConversation = useCallback((conversationId: string) => {
+    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+  }, []);
+
+  const getStatusColor = useCallback((status: string) => {
+    switch (status) {
+      case 'online': return theme.success;
+      case 'offline': return theme.textSecondary;
+      case 'ghost': return theme.secondary;
+      default: return theme.primary;
+    }
+  }, [theme]);
+
+  const formatTime = useCallback((date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const hours = diff / (1000 * 60 * 60);
     
     if (hours < 1) {
-      return 'À l\'instant';
+      const minutes = Math.floor(diff / (1000 * 60));
+      return minutes < 1 ? 'À l\'instant' : `${minutes}min`;
     } else if (hours < 24) {
       return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    } else if (hours < 48) {
+      return 'Hier';
     } else {
       return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
     }
-  };
+  }, []);
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.friendName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const ConversationCard = ({ item, index }: { item: Conversation; index: number }) => {
-    const cardAnim = new Animated.Value(0);
+  const ConversationCard = React.memo(({ item, index }: { item: Conversation; index: number }) => {
+    const cardAnim = useRef(new Animated.Value(0)).current;
+    const swipeAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
       Animated.timing(cardAnim, {
         toValue: 1,
         duration: 400,
-        delay: index * 100,
+        delay: index * 50,
         useNativeDriver: true,
       }).start();
+    }, []);
+
+    const handlePress = useCallback(() => {
+      markAsRead(item.id);
+      router.push(`/chat/${item.friendId}` as any);
+    }, [item.id, item.friendId]);
+
+    const handleLongPress = useCallback(() => {
+      // Show action sheet or context menu
     }, []);
 
     return (
@@ -165,7 +251,8 @@ export default function MessagesScreen() {
       >
         <TouchableOpacity
           style={[styles.conversationCard, { backgroundColor: theme.surface }]}
-          onPress={() => router.push(`/chat/${item.friendId}` as any)}
+          onPress={handlePress}
+          onLongPress={handleLongPress}
           activeOpacity={0.7}
         >
           <LinearGradient
@@ -198,22 +285,43 @@ export default function MessagesScreen() {
                 </View>
                 
                 <View style={styles.messagePreview}>
-                  <Text 
-                    style={[
-                      styles.lastMessage, 
-                      { color: item.unreadCount > 0 ? theme.text : theme.textSecondary }
-                    ]} 
-                    numberOfLines={1}
-                  >
-                    {item.lastMessage}
-                  </Text>
-                  {item.unreadCount > 0 && (
-                    <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
-                      <Text style={[styles.unreadCount, { color: theme.surface }]}>
-                        {item.unreadCount > 9 ? '9+' : item.unreadCount}
+                  <View style={styles.messageTextContainer}>
+                    {item.isTyping ? (
+                      <View style={styles.typingIndicator}>
+                        <Text style={[styles.typingText, { color: theme.primary }]}>
+                          En train d'écrire...
+                        </Text>
+                        <View style={styles.typingDots}>
+                          <Animated.View style={[styles.typingDot, { backgroundColor: theme.primary }]} />
+                          <Animated.View style={[styles.typingDot, { backgroundColor: theme.primary }]} />
+                          <Animated.View style={[styles.typingDot, { backgroundColor: theme.primary }]} />
+                        </View>
+                      </View>
+                    ) : (
+                      <Text 
+                        style={[
+                          styles.lastMessage, 
+                          { 
+                            color: item.unreadCount > 0 ? theme.text : theme.textSecondary,
+                            fontFamily: item.unreadCount > 0 ? 'Inter-SemiBold' : 'Inter-Regular'
+                          }
+                        ]} 
+                        numberOfLines={1}
+                      >
+                        {item.lastMessage}
                       </Text>
-                    </View>
-                  )}
+                    )}
+                  </View>
+                  
+                  <View style={styles.messageActions}>
+                    {item.unreadCount > 0 && (
+                      <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
+                        <Text style={[styles.unreadCount, { color: theme.surface }]}>
+                          {item.unreadCount > 9 ? '9+' : item.unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
             </View>
@@ -221,9 +329,9 @@ export default function MessagesScreen() {
         </TouchableOpacity>
       </Animated.View>
     );
-  };
+  });
 
-  const EmptyState = () => (
+  const EmptyState = React.memo(() => (
     <Animated.View 
       style={[
         styles.emptyState,
@@ -237,13 +345,78 @@ export default function MessagesScreen() {
         <MessageCircle color={theme.primary} size={48} />
       </View>
       <Text style={[styles.emptyTitle, { color: theme.text }]}>
-        Aucune conversation
+        {searchQuery ? 'Aucun résultat' : 'Aucune conversation'}
       </Text>
       <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-        Commencez à discuter avec vos amis pour voir vos conversations ici
+        {searchQuery 
+          ? 'Essayez avec d\'autres mots-clés'
+          : 'Commencez à discuter avec vos amis pour voir vos conversations ici'
+        }
       </Text>
     </Animated.View>
-  );
+  ));
+
+  const SearchBar = React.memo(() => (
+    <Animated.View 
+      style={[
+        styles.searchContainer,
+        { 
+          backgroundColor: theme.surface,
+          height: searchAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 60],
+          }),
+          opacity: searchAnim,
+        }
+      ]}
+    >
+      <Search color={theme.textSecondary} size={20} />
+      <TextInput
+        ref={searchInputRef}
+        style={[styles.searchInput, { color: theme.text }]}
+        placeholder="Rechercher une conversation..."
+        placeholderTextColor={theme.textSecondary}
+        value={searchQuery}
+        onChangeText={handleSearch}
+        returnKeyType="search"
+      />
+      {searchQuery.length > 0 && (
+        <TouchableOpacity onPress={() => handleSearch('')}>
+          <X color={theme.textSecondary} size={20} />
+        </TouchableOpacity>
+      )}
+    </Animated.View>
+  ));
+
+  const StatsBar = React.memo(() => (
+    <View style={[styles.statsBar, { backgroundColor: `${theme.primary}10` }]}>
+      <View style={styles.statItem}>
+        <Text style={[styles.statNumber, { color: theme.primary }]}>{stats.total}</Text>
+        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Conversations</Text>
+      </View>
+      <View style={styles.statItem}>
+        <Text style={[styles.statNumber, { color: theme.success }]}>{stats.online}</Text>
+        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>En ligne</Text>
+      </View>
+      <View style={styles.statItem}>
+        <Text style={[styles.statNumber, { color: theme.error }]}>{stats.unread}</Text>
+        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Non lus</Text>
+      </View>
+    </View>
+  ));
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.text }]}>
+            Chargement des conversations...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -267,16 +440,20 @@ export default function MessagesScreen() {
                 Messages
               </Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+                {stats.total} conversation{stats.total !== 1 ? 's' : ''}
+                {stats.unread > 0 && ` • ${stats.unread} non lu${stats.unread !== 1 ? 's' : ''}`}
               </Text>
             </View>
             
             <View style={styles.headerActions}>
               <TouchableOpacity 
-                style={[styles.headerButton, { backgroundColor: theme.surface }]}
-                onPress={() => setIsSearching(!isSearching)}
+                style={[
+                  styles.headerButton, 
+                  { backgroundColor: isSearching ? theme.primary : theme.surface }
+                ]}
+                onPress={toggleSearch}
               >
-                <Search color={theme.text} size={20} />
+                <Search color={isSearching ? theme.surface : theme.text} size={20} />
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -291,31 +468,10 @@ export default function MessagesScreen() {
       </LinearGradient>
 
       {/* Search Bar */}
-      {isSearching && (
-        <Animated.View 
-          style={[
-            styles.searchContainer,
-            { backgroundColor: theme.surface }
-          ]}
-        >
-          <Search color={theme.textSecondary} size={20} />
-          <TextInput
-            style={[styles.searchInput, { color: theme.text }]}
-            placeholder="Rechercher une conversation..."
-            placeholderTextColor={theme.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoFocus
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Text style={[styles.clearButton, { color: theme.primary }]}>
-                Effacer
-              </Text>
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      )}
+      <SearchBar />
+
+      {/* Stats Bar */}
+      {!isSearching && <StatsBar />}
 
       {/* Conversations List */}
       <View style={styles.content}>
@@ -323,11 +479,29 @@ export default function MessagesScreen() {
           <EmptyState />
         ) : (
           <FlatList
+            ref={listRef}
             data={filteredConversations}
             renderItem={({ item, index }) => <ConversationCard item={item} index={index} />}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[theme.primary]}
+                tintColor={theme.primary}
+              />
+            }
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={8}
+            getItemLayout={(data, index) => ({
+              length: 88,
+              offset: 88 * index,
+              index,
+            })}
           />
         )}
       </View>
@@ -338,6 +512,16 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
   },
   headerGradient: {
     paddingTop: 16,
@@ -380,25 +564,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 16,
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
     gap: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    overflow: 'hidden',
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
+    paddingVertical: 12,
   },
-  clearButton: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+  statsBar: {
+    flexDirection: 'row',
+    marginHorizontal: 24,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
   },
   content: {
     flex: 1,
@@ -477,11 +678,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  messageTextContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
   lastMessage: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    flex: 1,
-    marginRight: 8,
+  },
+  typingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  typingText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+  },
+  typingDots: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  typingDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  messageActions: {
+    alignItems: 'flex-end',
   },
   unreadBadge: {
     minWidth: 24,
