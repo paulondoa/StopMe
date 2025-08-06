@@ -40,9 +40,6 @@ import {
   X
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import MapClusters from '@/components/MapClusters';
-import { useGeofencing } from '@/hooks/useGeofencing';
-import { useProximityAlerts } from '@/hooks/useProximityAlerts';
 
 const { width, height } = Dimensions.get('window');
 
@@ -70,11 +67,8 @@ interface MapSettings {
   showGeofences: boolean;
   showPOIs: boolean;
   showClusters: boolean;
-  showTraffic: boolean;
-  showBuildings: boolean;
   mapType: 'standard' | 'satellite' | 'hybrid';
   followUser: boolean;
-  autoZoom: boolean;
 }
 
 export default function MapScreen() {
@@ -101,18 +95,14 @@ export default function MapScreen() {
     showGeofences: true,
     showPOIs: true,
     showClusters: true,
-    showTraffic: false,
-    showBuildings: true,
     mapType: 'standard',
     followUser: false,
-    autoZoom: true,
   });
   
   // UI state
   const [selectedFriend, setSelectedFriend] = useState<any>(null);
   const [routeToFriend, setRouteToFriend] = useState<any>(null);
   const [showMapControls, setShowMapControls] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   
   // Data state
   const [geofenceZones, setGeofenceZones] = useState<GeofenceZone[]>([]);
@@ -120,9 +110,15 @@ export default function MapScreen() {
   
   // Refs
   const mapRef = useRef<MapView>(null);
-  const animationRef = useRef<any>(null);
   
-  // Optimized distance calculation - moved before useMemo hooks
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-50)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const fabScale = useRef(new Animated.Value(0)).current;
+  const controlsAnim = useRef(new Animated.Value(0)).current;
+
+  // Calculate distance function
   const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -135,27 +131,7 @@ export default function MapScreen() {
     return R * c;
   }, []);
 
-  // Animations - Optimized with single values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(-50)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const fabScale = useRef(new Animated.Value(0)).current;
-  const controlsAnim = useRef(new Animated.Value(0)).current;
-  
-  // Custom hooks
-  const { 
-    events: geofenceEvents, 
-    activeZones, 
-    getZoneStatus 
-  } = useGeofencing(geofenceZones);
-  
-  const { 
-    alerts: proximityAlerts, 
-    settings: alertSettings,
-    unacknowledgedCount 
-  } = useProximityAlerts();
-
-  // Memoized calculations for performance
+  // Memoized calculations
   const onlineFriends = useMemo(() => 
     friends.filter(f => f.status === 'online'), 
     [friends]
@@ -177,17 +153,11 @@ export default function MapScreen() {
       );
       return distance <= 1; // Within 1km
     });
-  }, [location, friends]);
+  }, [location, friends, calculateDistance]);
 
   // Initialization
   useEffect(() => {
     initializeApp();
-    return () => {
-      // Cleanup animations
-      if (animationRef.current) {
-        animationRef.current.stop();
-      }
-    };
   }, []);
 
   const initializeApp = async () => {
@@ -201,7 +171,6 @@ export default function MapScreen() {
       ]);
     } catch (error) {
       console.error('Initialization error:', error);
-      Alert.alert('Erreur', 'Erreur lors de l\'initialisation de l\'application');
     } finally {
       setLoading(false);
     }
@@ -226,9 +195,6 @@ export default function MapScreen() {
   };
 
   const initializeGeofences = async () => {
-    // Simulate loading from storage/API
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
     const demoGeofences: GeofenceZone[] = [
       {
         id: 'home',
@@ -262,9 +228,6 @@ export default function MapScreen() {
   };
 
   const initializePOIs = async () => {
-    // Simulate loading from API
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
     const demoPOIs: POI[] = [
       {
         id: 'cafe1',
@@ -298,34 +261,27 @@ export default function MapScreen() {
   };
 
   const startAnimations = async () => {
-    // Optimized animation sequence
-    animationRef.current = Animated.sequence([
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.stagger(100, [
-        Animated.spring(fabScale, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]);
-    
-    animationRef.current.start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(fabScale, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     // Pulse animation for status indicator
-    const pulseAnimation = Animated.loop(
+    Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.2,
@@ -338,50 +294,27 @@ export default function MapScreen() {
           useNativeDriver: true,
         }),
       ])
-    );
-    pulseAnimation.start();
+    ).start();
   };
 
-  // Location updates with throttling
+  // Location updates
   useEffect(() => {
-    if (location && mapSettings.followUser) {
+    if (location && mapSettings.followUser && mapRef.current && mapReady) {
       const newRegion = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        latitudeDelta: mapSettings.autoZoom ? 0.01 : mapRegion.latitudeDelta,
-        longitudeDelta: mapSettings.autoZoom ? 0.01 : mapRegion.longitudeDelta,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
       };
       
-      // Throttle map updates
-      const timeoutId = setTimeout(() => {
-        setMapRegion(newRegion);
-        if (mapRef.current && mapReady) {
-          mapRef.current.animateToRegion(newRegion, 1000);
-        }
-      }, 1000);
-      
-      return () => clearTimeout(timeoutId);
+      mapRef.current.animateToRegion(newRegion, 1000);
+      setMapRegion(newRegion);
     }
-  }, [location, mapSettings.followUser, mapSettings.autoZoom, mapReady]);
+  }, [location, mapSettings.followUser, mapReady]);
 
-  // Optimized map functions
   const toggleVisibility = useCallback(async () => {
     const newVisibility = !isVisible;
     setIsVisible(newVisibility);
-
-    // Haptic feedback
-    Animated.sequence([
-      Animated.timing(fabScale, {
-        toValue: 0.9,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fabScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
 
     if (newVisibility && !isTracking) {
       await startTracking();
@@ -453,7 +386,6 @@ export default function MapScreen() {
     setRouteToFriend(route);
     setSelectedFriend(friend);
 
-    // Focus on route
     if (mapRef.current && mapReady) {
       mapRef.current.fitToCoordinates(route.coordinates, {
         edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
@@ -466,7 +398,6 @@ export default function MapScreen() {
     setMapSettings(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  // Utility functions
   const getMarkerColor = useCallback((status: string) => {
     switch (status) {
       case 'online': return theme.success;
@@ -495,225 +426,13 @@ export default function MapScreen() {
     }
   }, []);
 
-  // Optimized components
-  const QuickStats = React.memo(() => (
-    <Animated.View 
-      style={[
-        styles.quickStats,
-        { 
-          backgroundColor: `${theme.surface}F0`,
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }
-      ]}
-    >
-      <View style={styles.statItem}>
-        <View style={[styles.statIcon, { backgroundColor: `${theme.success}20` }]}>
-          <Users color={theme.success} size={16} />
-        </View>
-        <Text style={[styles.statNumber, { color: theme.text }]}>
-          {onlineFriends.length}
-        </Text>
-        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-          En ligne
-        </Text>
-      </View>
-
-      <View style={styles.statDivider} />
-
-      <View style={styles.statItem}>
-        <View style={[styles.statIcon, { backgroundColor: `${theme.primary}20` }]}>
-          <Target color={theme.primary} size={16} />
-        </View>
-        <Text style={[styles.statNumber, { color: theme.text }]}>
-          {activeGeofences.length}
-        </Text>
-        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-          Zones
-        </Text>
-      </View>
-
-      <View style={styles.statDivider} />
-
-      <View style={styles.statItem}>
-        <View style={[styles.statIcon, { backgroundColor: `${theme.accent}20` }]}>
-          <Bell color={theme.accent} size={16} />
-        </View>
-        <Text style={[styles.statNumber, { color: theme.text }]}>
-          {unacknowledgedCount}
-        </Text>
-        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-          Alertes
-        </Text>
-      </View>
-    </Animated.View>
-  ));
-
-  const MapControls = React.memo(() => (
-    <Animated.View
-      style={[
-        styles.mapControls,
-        {
-          backgroundColor: `${theme.surface}F5`,
-          opacity: controlsAnim,
-          transform: [
-            {
-              translateX: controlsAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-200, 0],
-              }),
-            },
-          ],
-        }
-      ]}
-    >
-      <View style={styles.controlHeader}>
-        <Text style={[styles.controlsTitle, { color: theme.text }]}>
-          Contrôles
-        </Text>
-        <TouchableOpacity onPress={toggleMapControls}>
-          <X color={theme.textSecondary} size={20} />
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.controlGroup}>
-          <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
-            Affichage
-          </Text>
-          
-          {[
-            { key: 'showGeofences', icon: Target, label: 'Géofences' },
-            { key: 'showPOIs', icon: Star, label: 'Points d\'intérêt' },
-            { key: 'showClusters', icon: Users, label: 'Clusters' },
-            { key: 'showTraffic', icon: Navigation, label: 'Trafic' },
-            { key: 'showBuildings', icon: Shield, label: 'Bâtiments' },
-          ].map(({ key, icon: Icon, label }) => (
-            <TouchableOpacity
-              key={key}
-              style={[
-                styles.controlItem, 
-                { backgroundColor: mapSettings[key as keyof MapSettings] ? theme.primary : theme.surface }
-              ]}
-              onPress={() => updateMapSetting(key as keyof MapSettings, !mapSettings[key as keyof MapSettings])}
-            >
-              <Icon 
-                color={mapSettings[key as keyof MapSettings] ? theme.surface : theme.text} 
-                size={20} 
-              />
-              <Text style={[
-                styles.controlText, 
-                { color: mapSettings[key as keyof MapSettings] ? theme.surface : theme.text }
-              ]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.controlGroup}>
-          <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
-            Type de carte
-          </Text>
-          
-          {['standard', 'satellite', 'hybrid'].map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.controlItem, 
-                { backgroundColor: mapSettings.mapType === type ? theme.primary : theme.surface }
-              ]}
-              onPress={() => updateMapSetting('mapType', type)}
-            >
-              <Text style={[
-                styles.controlText, 
-                { color: mapSettings.mapType === type ? theme.surface : theme.text }
-              ]}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.controlGroup}>
-          <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
-            Navigation
-          </Text>
-          
-          {[
-            { key: 'followUser', label: 'Suivre ma position' },
-            { key: 'autoZoom', label: 'Zoom automatique' },
-          ].map(({ key, label }) => (
-            <TouchableOpacity
-              key={key}
-              style={[
-                styles.controlItem, 
-                { backgroundColor: mapSettings[key as keyof MapSettings] ? theme.primary : theme.surface }
-              ]}
-              onPress={() => updateMapSetting(key as keyof MapSettings, !mapSettings[key as keyof MapSettings])}
-            >
-              <Text style={[
-                styles.controlText, 
-                { color: mapSettings[key as keyof MapSettings] ? theme.surface : theme.text }
-              ]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </Animated.View>
-  ));
-
-  const FloatingActionButton = React.memo(({ 
-    icon, 
-    onPress, 
-    backgroundColor, 
-    style = {},
-    delay = 0,
-    disabled = false
-  }: any) => {
-    const [buttonScale] = useState(new Animated.Value(0));
-
-    useEffect(() => {
-      Animated.timing(buttonScale, {
-        toValue: 1,
-        duration: 300,
-        delay,
-        useNativeDriver: true,
-      }).start();
-    }, []);
-
-    return (
-      <Animated.View
-        style={[
-          styles.fab,
-          { 
-            backgroundColor: disabled ? theme.textSecondary : backgroundColor,
-            transform: [{ scale: buttonScale }],
-          },
-          style,
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.fabButton}
-          onPress={onPress}
-          activeOpacity={0.8}
-          disabled={disabled}
-        >
-          {icon}
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  });
-
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.text }]}>
-            Initialisation...
+            Initialisation de la carte...
           </Text>
         </View>
       </SafeAreaView>
@@ -722,7 +441,7 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header with gradient */}
+      {/* Header */}
       <LinearGradient
         colors={isDark ? [theme.background, 'transparent'] : [`${theme.primary}10`, 'transparent']}
         style={styles.headerGradient}
@@ -749,7 +468,7 @@ export default function MapScreen() {
             <View style={styles.headerActions}>
               <TouchableOpacity
                 style={[styles.headerButton, { backgroundColor: theme.surface }]}
-                onPress={() => setShowSettings(true)}
+                onPress={() => {}}
               >
                 <Settings color={theme.text} size={20} />
               </TouchableOpacity>
@@ -766,7 +485,56 @@ export default function MapScreen() {
       </LinearGradient>
 
       {/* Quick Stats */}
-      <QuickStats />
+      <Animated.View 
+        style={[
+          styles.quickStats,
+          { 
+            backgroundColor: `${theme.surface}F0`,
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
+      >
+        <View style={styles.statItem}>
+          <View style={[styles.statIcon, { backgroundColor: `${theme.success}20` }]}>
+            <Users color={theme.success} size={16} />
+          </View>
+          <Text style={[styles.statNumber, { color: theme.text }]}>
+            {onlineFriends.length}
+          </Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            En ligne
+          </Text>
+        </View>
+
+        <View style={styles.statDivider} />
+
+        <View style={styles.statItem}>
+          <View style={[styles.statIcon, { backgroundColor: `${theme.primary}20` }]}>
+            <Target color={theme.primary} size={16} />
+          </View>
+          <Text style={[styles.statNumber, { color: theme.text }]}>
+            {activeGeofences.length}
+          </Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            Zones
+          </Text>
+        </View>
+
+        <View style={styles.statDivider} />
+
+        <View style={styles.statItem}>
+          <View style={[styles.statIcon, { backgroundColor: `${theme.accent}20` }]}>
+            <Bell color={theme.accent} size={16} />
+          </View>
+          <Text style={[styles.statNumber, { color: theme.text }]}>
+            0
+          </Text>
+          <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+            Alertes
+          </Text>
+        </View>
+      </Animated.View>
 
       {/* Map Container */}
       <View style={styles.mapContainer}>
@@ -780,10 +548,7 @@ export default function MapScreen() {
           showsUserLocation={isVisible}
           showsMyLocationButton={false}
           followsUserLocation={mapSettings.followUser}
-          showsTraffic={mapSettings.showTraffic}
-          showsBuildings={mapSettings.showBuildings}
           mapType={mapSettings.mapType}
-          customMapStyle={isDark ? darkMapStyle : []}
           loadingEnabled={true}
           loadingIndicatorColor={theme.primary}
           loadingBackgroundColor={theme.background}
@@ -804,41 +569,25 @@ export default function MapScreen() {
             </Marker>
           )}
 
-          {/* Friend markers with clustering */}
-          {mapSettings.showClusters ? (
-            <MapClusters
-              friends={friends}
-              region={mapRegion}
-              onFriendPress={focusOnFriend}
-              onClusterPress={(cluster) => {
-                if (mapRef.current && mapReady) {
-                  mapRef.current.fitToCoordinates(
-                    cluster.friends.map(f => ({ latitude: f.latitude, longitude: f.longitude })),
-                    { edgePadding: { top: 50, right: 50, bottom: 50, left: 50 }, animated: true }
-                  );
-                }
+          {/* Friend markers */}
+          {friends.map((friend) => (
+            <Marker
+              key={friend.id}
+              coordinate={{
+                latitude: friend.latitude,
+                longitude: friend.longitude,
               }}
-            />
-          ) : (
-            friends.map((friend) => (
-              <Marker
-                key={friend.id}
-                coordinate={{
-                  latitude: friend.latitude,
-                  longitude: friend.longitude,
-                }}
-                title={friend.name}
-                description={`${friend.status} • Vu: ${new Date(friend.last_seen).toLocaleTimeString()}`}
-                onPress={() => focusOnFriend(friend)}
-              >
-                <View style={[styles.friendMarker, { backgroundColor: getMarkerColor(friend.status) }]}>
-                  <Text style={[styles.friendMarkerText, { color: theme.surface }]}>
-                    {friend.name.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              </Marker>
-            ))
-          )}
+              title={friend.name}
+              description={`${friend.status} • Vu: ${new Date(friend.last_seen).toLocaleTimeString()}`}
+              onPress={() => focusOnFriend(friend)}
+            >
+              <View style={[styles.friendMarker, { backgroundColor: getMarkerColor(friend.status) }]}>
+                <Text style={[styles.friendMarkerText, { color: theme.surface }]}>
+                  {friend.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            </Marker>
+          ))}
 
           {/* Geofence zones */}
           {mapSettings.showGeofences && geofenceZones.map((zone) => (
@@ -878,44 +627,155 @@ export default function MapScreen() {
             />
           )}
         </MapView>
-
-        {/* Map Overlay */}
-        <LinearGradient
-          colors={['transparent', `${theme.background}40`]}
-          style={styles.mapOverlay}
-          pointerEvents="none"
-        />
       </View>
 
       {/* Map Controls */}
-      {showMapControls && <MapControls />}
+      {showMapControls && (
+        <Animated.View
+          style={[
+            styles.mapControls,
+            {
+              backgroundColor: `${theme.surface}F5`,
+              opacity: controlsAnim,
+              transform: [
+                {
+                  translateX: controlsAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-200, 0],
+                  }),
+                },
+              ],
+            }
+          ]}
+        >
+          <View style={styles.controlHeader}>
+            <Text style={[styles.controlsTitle, { color: theme.text }]}>
+              Contrôles
+            </Text>
+            <TouchableOpacity onPress={toggleMapControls}>
+              <X color={theme.textSecondary} size={20} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.controlGroup}>
+              <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
+                Affichage
+              </Text>
+              
+              {[
+                { key: 'showGeofences', icon: Target, label: 'Géofences' },
+                { key: 'showPOIs', icon: Star, label: 'Points d\'intérêt' },
+                { key: 'showClusters', icon: Users, label: 'Clusters' },
+              ].map(({ key, icon: Icon, label }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.controlItem, 
+                    { backgroundColor: mapSettings[key as keyof MapSettings] ? theme.primary : theme.surface }
+                  ]}
+                  onPress={() => updateMapSetting(key as keyof MapSettings, !mapSettings[key as keyof MapSettings])}
+                >
+                  <Icon 
+                    color={mapSettings[key as keyof MapSettings] ? theme.surface : theme.text} 
+                    size={20} 
+                  />
+                  <Text style={[
+                    styles.controlText, 
+                    { color: mapSettings[key as keyof MapSettings] ? theme.surface : theme.text }
+                  ]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.controlGroup}>
+              <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
+                Type de carte
+              </Text>
+              
+              {['standard', 'satellite', 'hybrid'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.controlItem, 
+                    { backgroundColor: mapSettings.mapType === type ? theme.primary : theme.surface }
+                  ]}
+                  onPress={() => updateMapSetting('mapType', type)}
+                >
+                  <Text style={[
+                    styles.controlText, 
+                    { color: mapSettings.mapType === type ? theme.surface : theme.text }
+                  ]}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </Animated.View>
+      )}
 
       {/* Floating Action Buttons */}
       <View style={styles.fabContainer}>
-        <FloatingActionButton
-          icon={isVisible ? <Eye color="white" size={24} /> : <EyeOff color="white" size={24} />}
-          onPress={toggleVisibility}
-          backgroundColor={isVisible ? theme.success : theme.secondary}
-          delay={0}
-        />
+        <Animated.View
+          style={[
+            styles.fab,
+            { 
+              backgroundColor: isVisible ? theme.success : theme.secondary,
+              transform: [{ scale: fabScale }],
+            }
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.fabButton}
+            onPress={toggleVisibility}
+            activeOpacity={0.8}
+          >
+            {isVisible ? <Eye color="white" size={24} /> : <EyeOff color="white" size={24} />}
+          </TouchableOpacity>
+        </Animated.View>
 
-        <FloatingActionButton
-          icon={<Compass color="white" size={24} />}
-          onPress={centerOnCurrentLocation}
-          backgroundColor={theme.primary}
-          delay={100}
-          disabled={!location}
-        />
+        <Animated.View
+          style={[
+            styles.fab,
+            { 
+              backgroundColor: theme.primary,
+              transform: [{ scale: fabScale }],
+            }
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.fabButton}
+            onPress={centerOnCurrentLocation}
+            activeOpacity={0.8}
+            disabled={!location}
+          >
+            <Compass color="white" size={24} />
+          </TouchableOpacity>
+        </Animated.View>
 
-        <FloatingActionButton
-          icon={<RefreshCw color="white" size={24} />}
-          onPress={() => {
-            setLoading(true);
-            setTimeout(() => setLoading(false), 1000);
-          }}
-          backgroundColor={theme.accent}
-          delay={200}
-        />
+        <Animated.View
+          style={[
+            styles.fab,
+            { 
+              backgroundColor: theme.accent,
+              transform: [{ scale: fabScale }],
+            }
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.fabButton}
+            onPress={() => {
+              setLoading(true);
+              setTimeout(() => setLoading(false), 1000);
+            }}
+            activeOpacity={0.8}
+          >
+            <RefreshCw color="white" size={24} />
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
       {/* Friend Details Modal */}
@@ -1038,38 +898,11 @@ export default function MapScreen() {
               {friends.length} ami{friends.length !== 1 ? 's' : ''} • {activeGeofences.length} zone{activeGeofences.length !== 1 ? 's' : ''}
             </Text>
           </View>
-          
-          {unacknowledgedCount > 0 && (
-            <>
-              <View style={styles.statusDivider} />
-              <View style={styles.statusItem}>
-                <Bell color={theme.error} size={16} />
-                <Text style={[styles.statusText, { color: theme.error }]}>
-                  {unacknowledgedCount} alerte{unacknowledgedCount !== 1 ? 's' : ''}
-                </Text>
-              </View>
-            </>
-          )}
         </View>
       </Animated.View>
     </SafeAreaView>
   );
 }
-
-const darkMapStyle = [
-  {
-    "elementType": "geometry",
-    "stylers": [{ "color": "#242f3e" }]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{ "color": "#242f3e" }]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#746855" }]
-  }
-];
 
 const styles = StyleSheet.create({
   container: {
@@ -1173,13 +1006,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-  },
-  mapOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
   },
   userMarker: {
     width: 20,
