@@ -43,34 +43,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
-interface GeofenceZone {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-  type: 'safe' | 'alert' | 'custom';
-  active: boolean;
-}
-
-interface POI {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  type: 'restaurant' | 'cafe' | 'park' | 'shop' | 'custom';
-  rating: number;
-  description: string;
-}
-
-interface MapSettings {
-  showGeofences: boolean;
-  showPOIs: boolean;
-  showClusters: boolean;
-  mapType: 'standard' | 'satellite' | 'hybrid';
-  followUser: boolean;
-}
-
 export default function MapScreen() {
   const { user, friends } = useDemoAuth();
   const { location, hasPermission, requestPermission, startTracking, stopTracking, isTracking } = useDemoLocation();
@@ -90,23 +62,9 @@ export default function MapScreen() {
     longitudeDelta: 0.0421,
   });
   
-  // Settings state
-  const [mapSettings, setMapSettings] = useState<MapSettings>({
-    showGeofences: true,
-    showPOIs: true,
-    showClusters: true,
-    mapType: 'standard',
-    followUser: false,
-  });
-  
   // UI state
   const [selectedFriend, setSelectedFriend] = useState<any>(null);
   const [routeToFriend, setRouteToFriend] = useState<any>(null);
-  const [showMapControls, setShowMapControls] = useState(false);
-  
-  // Data state
-  const [geofenceZones, setGeofenceZones] = useState<GeofenceZone[]>([]);
-  const [pois, setPOIs] = useState<POI[]>([]);
   
   // Refs
   const mapRef = useRef<MapView>(null);
@@ -114,11 +72,8 @@ export default function MapScreen() {
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-50)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const fabScale = useRef(new Animated.Value(0)).current;
-  const controlsAnim = useRef(new Animated.Value(0)).current;
 
-  // Calculate distance function
+  // Calculate distance function - MOVED BEFORE useMemo
   const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -135,11 +90,6 @@ export default function MapScreen() {
   const onlineFriends = useMemo(() => 
     friends.filter(f => f.status === 'online'), 
     [friends]
-  );
-  
-  const activeGeofences = useMemo(() => 
-    geofenceZones.filter(z => z.active), 
-    [geofenceZones]
   );
   
   const nearbyFriends = useMemo(() => {
@@ -163,12 +113,8 @@ export default function MapScreen() {
   const initializeApp = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        initializeLocation(),
-        initializeGeofences(),
-        initializePOIs(),
-        startAnimations()
-      ]);
+      await initializeLocation();
+      startAnimations();
     } catch (error) {
       console.error('Initialization error:', error);
     } finally {
@@ -194,72 +140,6 @@ export default function MapScreen() {
     }
   };
 
-  const initializeGeofences = async () => {
-    const demoGeofences: GeofenceZone[] = [
-      {
-        id: 'home',
-        name: 'Domicile',
-        latitude: 37.7849,
-        longitude: -122.4094,
-        radius: 200,
-        type: 'safe',
-        active: true,
-      },
-      {
-        id: 'work',
-        name: 'Bureau',
-        latitude: 37.7849,
-        longitude: -122.4194,
-        radius: 150,
-        type: 'custom',
-        active: true,
-      },
-      {
-        id: 'school',
-        name: 'École',
-        latitude: 37.7749,
-        longitude: -122.4194,
-        radius: 100,
-        type: 'alert',
-        active: true,
-      },
-    ];
-    setGeofenceZones(demoGeofences);
-  };
-
-  const initializePOIs = async () => {
-    const demoPOIs: POI[] = [
-      {
-        id: 'cafe1',
-        name: 'Blue Bottle Coffee',
-        latitude: 37.7849,
-        longitude: -122.4124,
-        type: 'cafe',
-        rating: 4.5,
-        description: 'Excellent café artisanal',
-      },
-      {
-        id: 'restaurant1',
-        name: 'Tartine Bakery',
-        latitude: 37.7819,
-        longitude: -122.4164,
-        type: 'restaurant',
-        rating: 4.8,
-        description: 'Boulangerie française authentique',
-      },
-      {
-        id: 'park1',
-        name: 'Dolores Park',
-        latitude: 37.7596,
-        longitude: -122.4269,
-        type: 'park',
-        rating: 4.6,
-        description: 'Parc urbain avec vue panoramique',
-      },
-    ];
-    setPOIs(demoPOIs);
-  };
-
   const startAnimations = async () => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -272,34 +152,12 @@ export default function MapScreen() {
         duration: 500,
         useNativeDriver: true,
       }),
-      Animated.spring(fabScale, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
     ]).start();
-
-    // Pulse animation for status indicator
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.2,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
   };
 
   // Location updates
   useEffect(() => {
-    if (location && mapSettings.followUser && mapRef.current && mapReady) {
+    if (location && mapRef.current && mapReady) {
       const newRegion = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -310,7 +168,7 @@ export default function MapScreen() {
       mapRef.current.animateToRegion(newRegion, 1000);
       setMapRegion(newRegion);
     }
-  }, [location, mapSettings.followUser, mapReady]);
+  }, [location, mapReady]);
 
   const toggleVisibility = useCallback(async () => {
     const newVisibility = !isVisible;
@@ -322,17 +180,6 @@ export default function MapScreen() {
       stopTracking();
     }
   }, [isVisible, isTracking, startTracking, stopTracking]);
-
-  const toggleMapControls = useCallback(() => {
-    const newValue = !showMapControls;
-    setShowMapControls(newValue);
-    
-    Animated.timing(controlsAnim, {
-      toValue: newValue ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [showMapControls]);
 
   const centerOnCurrentLocation = useCallback(() => {
     if (location && mapRef.current && mapReady) {
@@ -394,10 +241,6 @@ export default function MapScreen() {
     }
   }, [location, calculateDistance, mapReady]);
 
-  const updateMapSetting = useCallback((key: keyof MapSettings, value: any) => {
-    setMapSettings(prev => ({ ...prev, [key]: value }));
-  }, []);
-
   const getMarkerColor = useCallback((status: string) => {
     switch (status) {
       case 'online': return theme.success;
@@ -406,25 +249,6 @@ export default function MapScreen() {
       default: return theme.primary;
     }
   }, [theme]);
-
-  const getGeofenceColor = useCallback((type: string) => {
-    switch (type) {
-      case 'safe': return theme.success;
-      case 'alert': return theme.error;
-      case 'custom': return theme.primary;
-      default: return theme.secondary;
-    }
-  }, [theme]);
-
-  const getPOIIcon = useCallback((type: string) => {
-    switch (type) {
-      case 'restaurant': return '🍽️';
-      case 'cafe': return '☕';
-      case 'park': return '🌳';
-      case 'shop': return '🛍️';
-      default: return '📍';
-    }
-  }, []);
 
   if (loading) {
     return (
@@ -472,13 +296,6 @@ export default function MapScreen() {
               >
                 <Settings color={theme.text} size={20} />
               </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.headerButton, { backgroundColor: theme.primary }]}
-                onPress={toggleMapControls}
-              >
-                <Filter color={theme.surface} size={20} />
-              </TouchableOpacity>
             </View>
           </View>
         </Animated.View>
@@ -514,7 +331,7 @@ export default function MapScreen() {
             <Target color={theme.primary} size={16} />
           </View>
           <Text style={[styles.statNumber, { color: theme.text }]}>
-            {activeGeofences.length}
+            3
           </Text>
           <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
             Zones
@@ -547,8 +364,6 @@ export default function MapScreen() {
           provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
           showsUserLocation={isVisible}
           showsMyLocationButton={false}
-          followsUserLocation={mapSettings.followUser}
-          mapType={mapSettings.mapType}
           loadingEnabled={true}
           loadingIndicatorColor={theme.primary}
           loadingBackgroundColor={theme.background}
@@ -589,34 +404,6 @@ export default function MapScreen() {
             </Marker>
           ))}
 
-          {/* Geofence zones */}
-          {mapSettings.showGeofences && geofenceZones.map((zone) => (
-            <Circle
-              key={zone.id}
-              center={{
-                latitude: zone.latitude,
-                longitude: zone.longitude,
-              }}
-              radius={zone.radius}
-              fillColor={`${getGeofenceColor(zone.type)}20`}
-              strokeColor={getGeofenceColor(zone.type)}
-              strokeWidth={2}
-            />
-          ))}
-
-          {/* Points of Interest */}
-          {mapSettings.showPOIs && pois.map((poi) => (
-            <Marker
-              key={poi.id}
-              coordinate={{
-                latitude: poi.latitude,
-                longitude: poi.longitude,
-              }}
-              title={`${getPOIIcon(poi.type)} ${poi.name}`}
-              description={`⭐ ${poi.rating} - ${poi.description}`}
-            />
-          ))}
-
           {/* Route to friend */}
           {routeToFriend && (
             <Polyline
@@ -629,153 +416,35 @@ export default function MapScreen() {
         </MapView>
       </View>
 
-      {/* Map Controls */}
-      {showMapControls && (
-        <Animated.View
-          style={[
-            styles.mapControls,
-            {
-              backgroundColor: `${theme.surface}F5`,
-              opacity: controlsAnim,
-              transform: [
-                {
-                  translateX: controlsAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-200, 0],
-                  }),
-                },
-              ],
-            }
-          ]}
-        >
-          <View style={styles.controlHeader}>
-            <Text style={[styles.controlsTitle, { color: theme.text }]}>
-              Contrôles
-            </Text>
-            <TouchableOpacity onPress={toggleMapControls}>
-              <X color={theme.textSecondary} size={20} />
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={styles.controlGroup}>
-              <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
-                Affichage
-              </Text>
-              
-              {[
-                { key: 'showGeofences', icon: Target, label: 'Géofences' },
-                { key: 'showPOIs', icon: Star, label: 'Points d\'intérêt' },
-                { key: 'showClusters', icon: Users, label: 'Clusters' },
-              ].map(({ key, icon: Icon, label }) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[
-                    styles.controlItem, 
-                    { backgroundColor: mapSettings[key as keyof MapSettings] ? theme.primary : theme.surface }
-                  ]}
-                  onPress={() => updateMapSetting(key as keyof MapSettings, !mapSettings[key as keyof MapSettings])}
-                >
-                  <Icon 
-                    color={mapSettings[key as keyof MapSettings] ? theme.surface : theme.text} 
-                    size={20} 
-                  />
-                  <Text style={[
-                    styles.controlText, 
-                    { color: mapSettings[key as keyof MapSettings] ? theme.surface : theme.text }
-                  ]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.controlGroup}>
-              <Text style={[styles.controlLabel, { color: theme.textSecondary }]}>
-                Type de carte
-              </Text>
-              
-              {['standard', 'satellite', 'hybrid'].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.controlItem, 
-                    { backgroundColor: mapSettings.mapType === type ? theme.primary : theme.surface }
-                  ]}
-                  onPress={() => updateMapSetting('mapType', type)}
-                >
-                  <Text style={[
-                    styles.controlText, 
-                    { color: mapSettings.mapType === type ? theme.surface : theme.text }
-                  ]}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </Animated.View>
-      )}
-
       {/* Floating Action Buttons */}
       <View style={styles.fabContainer}>
-        <Animated.View
-          style={[
-            styles.fab,
-            { 
-              backgroundColor: isVisible ? theme.success : theme.secondary,
-              transform: [{ scale: fabScale }],
-            }
-          ]}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: isVisible ? theme.success : theme.secondary }]}
+          onPress={toggleVisibility}
+          activeOpacity={0.8}
         >
-          <TouchableOpacity
-            style={styles.fabButton}
-            onPress={toggleVisibility}
-            activeOpacity={0.8}
-          >
-            {isVisible ? <Eye color="white" size={24} /> : <EyeOff color="white" size={24} />}
-          </TouchableOpacity>
-        </Animated.View>
+          {isVisible ? <Eye color="white" size={24} /> : <EyeOff color="white" size={24} />}
+        </TouchableOpacity>
 
-        <Animated.View
-          style={[
-            styles.fab,
-            { 
-              backgroundColor: theme.primary,
-              transform: [{ scale: fabScale }],
-            }
-          ]}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.primary }]}
+          onPress={centerOnCurrentLocation}
+          activeOpacity={0.8}
+          disabled={!location}
         >
-          <TouchableOpacity
-            style={styles.fabButton}
-            onPress={centerOnCurrentLocation}
-            activeOpacity={0.8}
-            disabled={!location}
-          >
-            <Compass color="white" size={24} />
-          </TouchableOpacity>
-        </Animated.View>
+          <Compass color="white" size={24} />
+        </TouchableOpacity>
 
-        <Animated.View
-          style={[
-            styles.fab,
-            { 
-              backgroundColor: theme.accent,
-              transform: [{ scale: fabScale }],
-            }
-          ]}
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.accent }]}
+          onPress={() => {
+            setLoading(true);
+            setTimeout(() => setLoading(false), 1000);
+          }}
+          activeOpacity={0.8}
         >
-          <TouchableOpacity
-            style={styles.fabButton}
-            onPress={() => {
-              setLoading(true);
-              setTimeout(() => setLoading(false), 1000);
-            }}
-            activeOpacity={0.8}
-          >
-            <RefreshCw color="white" size={24} />
-          </TouchableOpacity>
-        </Animated.View>
+          <RefreshCw color="white" size={24} />
+        </TouchableOpacity>
       </View>
 
       {/* Friend Details Modal */}
@@ -876,13 +545,10 @@ export default function MapScreen() {
       >
         <View style={styles.statusContent}>
           <View style={styles.statusItem}>
-            <Animated.View 
+            <View 
               style={[
                 styles.statusDot, 
-                { 
-                  backgroundColor: isVisible ? theme.success : theme.textSecondary,
-                  transform: [{ scale: isVisible ? pulseAnim : 1 }],
-                }
+                { backgroundColor: isVisible ? theme.success : theme.textSecondary }
               ]} 
             />
             <Text style={[styles.statusText, { color: theme.text }]}>
@@ -895,7 +561,7 @@ export default function MapScreen() {
           <View style={styles.statusItem}>
             <MapPin color={theme.primary} size={16} />
             <Text style={[styles.statusText, { color: theme.text }]}>
-              {friends.length} ami{friends.length !== 1 ? 's' : ''} • {activeGeofences.length} zone{activeGeofences.length !== 1 ? 's' : ''}
+              {friends.length} ami{friends.length !== 1 ? 's' : ''} • 3 zones
             </Text>
           </View>
         </View>
@@ -1034,52 +700,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Bold',
   },
-  mapControls: {
-    position: 'absolute',
-    left: 24,
-    top: 140,
-    bottom: 140,
-    width: 220,
-    borderRadius: 16,
-    padding: 16,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    zIndex: 15,
-  },
-  controlHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  controlsTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-  },
-  controlGroup: {
-    marginBottom: 20,
-  },
-  controlLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  controlItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    gap: 8,
-  },
-  controlText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-  },
   fabContainer: {
     position: 'absolute',
     right: 24,
@@ -1096,11 +716,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-  },
-  fabButton: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
