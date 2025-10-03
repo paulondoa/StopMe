@@ -15,7 +15,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDemoAuth } from '@/contexts/DemoAuthContext';
 import { useDemoLocation } from '@/contexts/DemoLocationContext';
-import { LogOut, MapPin, Eye, EyeOff, Shield, Settings as SettingsIcon, User, Bell, Globe, Palette, ChevronRight, CreditCard as Edit3 } from 'lucide-react-native';
+import { LogOut, MapPin, Eye, EyeOff, Shield, Settings as SettingsIcon, User, Bell, Globe, Palette, ChevronRight, Edit3 } from 'lucide-react-native';
 import SettingsModal from '@/components/SettingsModal';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -35,8 +35,13 @@ export default function ProfileScreen() {
   const slideAnim = new Animated.Value(30);
 
   useEffect(() => {
+    console.log('ProfileScreen - user:', user);
     if (user) {
-      setProfile(user);
+      setProfile({
+        ...user,
+        visible: true,
+        status: 'online'
+      });
       setLoading(false);
       
       // Animate in
@@ -52,11 +57,16 @@ export default function ProfileScreen() {
           useNativeDriver: true,
         }),
       ]).start();
+    } else {
+      console.log('ProfileScreen - no user found');
+      setLoading(false);
     }
   }, [user]);
 
   const updateProfile = async (updates: any) => {
-    setProfile({ ...profile, ...updates });
+    if (profile) {
+      setProfile({ ...profile, ...updates });
+    }
   };
 
   const toggleVisibility = async (value: boolean) => {
@@ -128,11 +138,27 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.centered}>
-          <Text style={{ color: theme.text }}>{t('loading')}</Text>
+          <Text style={[styles.loadingText, { color: theme.text }]}>{t('loading')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.centered}>
+          <Text style={[styles.errorText, { color: theme.error }]}>Erreur: Profil non trouvé</Text>
+          <TouchableOpacity 
+            style={[styles.retryButton, { backgroundColor: theme.primary }]}
+            onPress={() => window.location.reload()}
+          >
+            <Text style={[styles.retryButtonText, { color: theme.surface }]}>Réessayer</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -210,7 +236,7 @@ export default function ProfileScreen() {
                 <View style={styles.avatarContainer}>
                   <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
                     <Text style={[styles.avatarText, { color: theme.surface }]}>
-                      {profile.name.charAt(0).toUpperCase()}
+                      {profile.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                     </Text>
                   </View>
                   <View 
@@ -226,10 +252,10 @@ export default function ProfileScreen() {
                 
                 <View style={styles.profileInfo}>
                   <Text style={[styles.name, { color: isDark ? theme.surface : theme.text }]}>
-                    {profile.name}
+                    {profile.name || 'Utilisateur'}
                   </Text>
                   <Text style={[styles.email, { color: isDark ? `${theme.surface}CC` : theme.textSecondary }]}>
-                    {profile.email}
+                    {profile.email || 'email@example.com'}
                   </Text>
                   <View style={styles.statusContainer}>
                     <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
@@ -290,7 +316,7 @@ export default function ProfileScreen() {
                 title="Notifications"
                 description="Gérer les notifications push"
                 showSwitch={false}
-                onPress={() => {}}
+                onPress={() => Alert.alert('Notifications', 'Fonctionnalité à venir')}
                 iconColor={theme.warning}
               />
 
@@ -365,6 +391,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
   header: {
     flexDirection: 'row',
